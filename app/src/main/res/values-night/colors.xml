@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ألوان الوضع الليلي — override لشاشة Splash فقط.
+    الثيم الليلي الكامل يُدار عبر Compose في SakinahTheme.kt
+-->
+<resources>
+    <color name="splash_bg">#121619</color>
+</resources>

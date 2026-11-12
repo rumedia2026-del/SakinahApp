@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash background (Warm Paper) -->
+    <color name="splash_bg">#FAF8F5</color>
+
+    <!-- Primary green -->
+    <color name="sakinah_green">#1B5E20</color>
+    <color name="sakinah_green_light">#4CAF50</color>
+</resources>

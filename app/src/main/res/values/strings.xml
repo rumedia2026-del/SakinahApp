@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">سكينة</string>
+    <string name="app_name_en">Sakinah</string>
+
+    <!-- Navigation Labels -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_azkar">الأذكار</string>
+    <string name="nav_tasbih">المسبحة</string>
+    <string name="nav_emotional">بماذا تشعر</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <!-- Home Screen -->
+    <string name="greeting_morning">صباح النور</string>
+    <string name="greeting_evening">مساء الخير</string>
+    <string name="greeting_night">ليلة طيبة</string>
+    <string name="smart_card_morning_title">أذكار الصباح</string>
+    <string name="smart_card_evening_title">أذكار المساء</string>
+    <string name="smart_card_sleep_title">أذكار النوم</string>
+    <string name="smart_card_friday_title">أذكار الجمعة</string>
+    <string name="start_now">ابدأ الآن</string>
+    <string name="continue_reading">تابع القراءة</string>
+
+    <!-- Categories -->
+    <string name="category_morning">أذكار الصباح</string>
+    <string name="category_evening">أذكار المساء</string>
+    <string name="category_after_prayer">أذكار بعد الصلاة</string>
+    <string name="category_sleep">أذكار النوم</string>
+    <string name="category_wake_up">أذكار الاستيقاظ</string>
+    <string name="category_home">أذكار المنزل</string>
+    <string name="category_mosque">أذكار المسجد</string>
+    <string name="category_food">أذكار الطعام</string>
+    <string name="category_travel">أذكار السفر</string>
+    <string name="category_ruqyah">الرقية الشرعية</string>
+    <string name="category_quran_duas">أدعية قرآنية</string>
+    <string name="category_prophets_duas">أدعية الأنبياء</string>
+    <string name="category_istikharah">صلاة الاستخارة</string>
+
+    <!-- Zikr Detail -->
+    <string name="times_format">× %1$d</string>
+    <string name="source_label">المصدر</string>
+    <string name="virtue_label">الفضل والثواب</string>
+    <string name="show_virtue">عرض الفضل</string>
+    <string name="hide_virtue">إخفاء الفضل</string>
+    <string name="show_tashkeel">إظهار التشكيل</string>
+    <string name="hide_tashkeel">إخفاء التشكيل</string>
+    <string name="copy_zikr">نسخ الذكر</string>
+    <string name="share_zikr">مشاركة الذكر</string>
+    <string name="add_to_wird">إضافة للورد</string>
+
+    <!-- Tasbih -->
+    <string name="tasbih_title">المسبحة</string>
+    <string name="tasbih_instruction">انقر في أي مكان للتسبيح</string>
+    <string name="tasbih_reset">إعادة ضبط</string>
+    <string name="tasbih_target">الهدف</string>
+    <string name="subhan_allah">سُبْحَانَ اللَّهِ</string>
+    <string name="alhamdulillah">الْحَمْدُ لِلَّهِ</string>
+    <string name="allahu_akbar">اللَّهُ أَكْبَرُ</string>
+    <string name="la_ilaha_illallah">لَا إِلَهَ إِلَّا اللَّهُ</string>
+
+    <!-- Emotional Companion -->
+    <string name="emotional_title">بماذا تشعر الآن؟</string>
+    <string name="emotional_subtitle">اختر حالتك وسنقترح لك الأدعية المناسبة</string>
+    <string name="emotion_anxiety">قلق وتوتر</string>
+    <string name="emotion_sadness">حزن وضيق</string>
+    <string name="emotion_fear">خوف</string>
+    <string name="emotion_istikharah">استخارة وتردد</string>
+    <string name="emotion_rizq">طلب الرزق</string>
+    <string name="emotion_gratitude">شكر وامتنان</string>
+    <string name="emotion_sickness">مرض وألم</string>
+    <string name="emotion_happiness">فرح وسرور</string>
+
+    <!-- Settings -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_theme">المظهر</string>
+    <string name="settings_font_size">حجم الخط</string>
+    <string name="settings_notifications">الإشعارات</string>
+    <string name="settings_language">اللغة</string>
+    <string name="theme_warm_paper">ورقي دافئ</string>
+    <string name="theme_soft_dark">ليلي هادئ</string>
+    <string name="theme_oled_black">أسود نقي</string>
+    <string name="theme_material_you">ألوان ديناميكية</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_azkar">تذكيرات الأذكار</string>
+    <string name="notif_channel_azkar_desc">تذكيرك بأذكار الصباح والمساء وبعد الصلاة</string>
+    <string name="notif_morning_title">وقت أذكار الصباح 🌅</string>
+    <string name="notif_evening_title">وقت أذكار المساء 🌇</string>
+
+    <!-- Zen Mode -->
+    <string name="zen_mode">وضع التركيز</string>
+    <string name="zen_auto_scroll">التمرير التلقائي</string>
+    <string name="zen_keep_screen">إبقاء الشاشة مضاءة</string>
+
+    <!-- General -->
+    <string name="ok">حسناً</string>
+    <string name="cancel">إلغاء</string>
+    <string name="done">تم</string>
+    <string name="next">التالي</string>
+    <string name="prev">السابق</string>
+    <string name="complete">اكتمل</string>
+    <string name="favorite">مفضلة</string>
+    <string name="all">الكل</string>
+    <string name="search_hint">ابحث عن ذكر أو دعاء…</string>
+    <string name="wird_title">وردي اليومي</string>
+    <string name="progress_label">تقدمك اليوم</string>
+    <string name="completed_label">مكتمل</string>
+</resources>
