@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.HearingDisabled
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -53,6 +55,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -388,6 +391,92 @@ fun SettingsScreen(
                         Switch(
                             checked = preferences.hapticFeedbackEnabled,
                             onCheckedChange = viewModel::toggleHaptic
+                        )
+                    }
+                }
+            }
+
+            // قسم وضع فاقدي السمع (الاهتزاز المميز والوميض البصري)
+            Card(
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.HearingDisabled,
+                                contentDescription = null,
+                                tint = Color(0xFFC8A951)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "وضع فاقدي السمع",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "الاهتزاز الموجي والوميض البصري",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = preferences.deafHapticVisualMode,
+                            onCheckedChange = viewModel::toggleDeafMode
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "عند التفعيل: يصدر الهاتف نبضات اهتزاز مخصصة لكل صلاة، مع وميض بصري ذهبي هادئ للشاشة عند إتمام التسبيح وبلوغ الأهداف.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // قسم مواقيت الصلاة والمدينة
+            Card(
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "مواقيت الصلاة والمدينة",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "المدينة المختارة حالياً: ${preferences.selectedCityName}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFC8A951),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "تفعيل تنبيهات الأذان", style = MaterialTheme.typography.bodyMedium)
+                        Switch(
+                            checked = preferences.prayerAlarmEnabled,
+                            onCheckedChange = viewModel::togglePrayerAlarm
                         )
                     }
                 }

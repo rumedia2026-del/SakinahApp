@@ -154,6 +154,11 @@ fun SakinahNavGraph() {
                 ZenModeScreen(navController = navController)
             }
 
+            // ── شاشة مواقيت الصلاة والقبلة ──
+            composable(Screen.PrayerTimes.route) {
+                com.sakinah.app.feature.prayer.PrayerQiblaScreen(onNavigateBack = { navController.popBackStack() })
+            }
+
             // ── شاشة الإعدادات ──
             composable(Screen.Settings.route) {
                 SettingsScreen(onNavigateBack = { navController.popBackStack() })

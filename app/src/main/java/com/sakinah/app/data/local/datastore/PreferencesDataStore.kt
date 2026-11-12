@@ -7,7 +7,6 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.sakinah.app.core.ui.theme.SakinahThemeMode
@@ -21,15 +20,16 @@ import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "sakinah_preferences")
 
-/**
- * فئة نموذجية لحمل تفضيلات المستخدم الخاصة بالواجهة والأذكار
- */
 data class UserPreferences(
     val themeMode: SakinahThemeMode,
     val fontSizeMultiplier: Float,
     val showTashkeel: Boolean,
     val hapticFeedbackEnabled: Boolean,
+    val deafHapticVisualMode: Boolean,     // وضع فاقدي السمع (الاهتزاز المميز والوميض البصري)
     val autoScrollSpeed: Float,
+    val selectedCityName: String,          // المدينة المختارة لمواقيت الصلاة
+    val calculationMethod: String,         // طريقة الحساب (EGYPT, MWL, MAKKAH)
+    val prayerAlarmEnabled: Boolean,       // تنبيه الأذان
     val morningNotificationTime: String,
     val eveningNotificationTime: String
 )
@@ -44,14 +44,15 @@ class PreferencesDataStore @Inject constructor(
         val FONT_SIZE_MULTIPLIER = floatPreferencesKey("font_size_multiplier")
         val SHOW_TASHKEEL = booleanPreferencesKey("show_tashkeel")
         val HAPTIC_ENABLED = booleanPreferencesKey("haptic_enabled")
+        val DEAF_MODE = booleanPreferencesKey("deaf_haptic_visual_mode")
         val AUTO_SCROLL_SPEED = floatPreferencesKey("auto_scroll_speed")
+        val SELECTED_CITY = stringPreferencesKey("selected_city_name")
+        val CALC_METHOD = stringPreferencesKey("calc_method")
+        val PRAYER_ALARM = booleanPreferencesKey("prayer_alarm_enabled")
         val MORNING_TIME = stringPreferencesKey("morning_notification_time")
         val EVENING_TIME = stringPreferencesKey("evening_notification_time")
     }
 
-    /**
-     * تدفق يبعث تفضيلات المستخدم بشكل فوري ومستمر
-     */
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data
         .catch { exception ->
             if (exception is IOException) {
@@ -71,7 +72,11 @@ class PreferencesDataStore @Inject constructor(
             val fontSize = preferences[PreferencesKeys.FONT_SIZE_MULTIPLIER] ?: 1.0f
             val showTashkeel = preferences[PreferencesKeys.SHOW_TASHKEEL] ?: true
             val hapticEnabled = preferences[PreferencesKeys.HAPTIC_ENABLED] ?: true
+            val deafMode = preferences[PreferencesKeys.DEAF_MODE] ?: false
             val autoScrollSpeed = preferences[PreferencesKeys.AUTO_SCROLL_SPEED] ?: 1.0f
+            val cityName = preferences[PreferencesKeys.SELECTED_CITY] ?: "القاهرة"
+            val calcMethod = preferences[PreferencesKeys.CALC_METHOD] ?: "EGYPT"
+            val prayerAlarm = preferences[PreferencesKeys.PRAYER_ALARM] ?: true
             val morningTime = preferences[PreferencesKeys.MORNING_TIME] ?: "05:30"
             val eveningTime = preferences[PreferencesKeys.EVENING_TIME] ?: "17:00"
 
@@ -80,7 +85,11 @@ class PreferencesDataStore @Inject constructor(
                 fontSizeMultiplier = fontSize,
                 showTashkeel = showTashkeel,
                 hapticFeedbackEnabled = hapticEnabled,
+                deafHapticVisualMode = deafMode,
                 autoScrollSpeed = autoScrollSpeed,
+                selectedCityName = cityName,
+                calculationMethod = calcMethod,
+                prayerAlarmEnabled = prayerAlarm,
                 morningNotificationTime = morningTime,
                 eveningNotificationTime = eveningTime
             )
@@ -94,7 +103,7 @@ class PreferencesDataStore @Inject constructor(
 
     suspend fun setFontSizeMultiplier(multiplier: Float) {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.FONT_SIZE_MULTIPLIER] = multiplier.coerceIn(0.8f, 1.4f)
+            preferences[PreferencesKeys.FONT_SIZE_MULTIPLIER] = multiplier.coerceIn(0.8f, 1.6f)
         }
     }
 
@@ -110,21 +119,33 @@ class PreferencesDataStore @Inject constructor(
         }
     }
 
+    suspend fun setDeafHapticVisualMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DEAF_MODE] = enabled
+        }
+    }
+
     suspend fun setAutoScrollSpeed(speed: Float) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.AUTO_SCROLL_SPEED] = speed.coerceIn(0.5f, 3.0f)
         }
     }
 
-    suspend fun setMorningNotificationTime(time: String) {
+    suspend fun setSelectedCity(cityName: String) {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.MORNING_TIME] = time
+            preferences[PreferencesKeys.SELECTED_CITY] = cityName
         }
     }
 
-    suspend fun setEveningNotificationTime(time: String) {
+    suspend fun setCalculationMethod(method: String) {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.EVENING_TIME] = time
+            preferences[PreferencesKeys.CALC_METHOD] = method
+        }
+    }
+
+    suspend fun setPrayerAlarmEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.PRAYER_ALARM] = enabled
         }
     }
 }

@@ -58,6 +58,12 @@ fun EmotionalCompanionScreen(
     val haptic = rememberHapticFeedback()
 
     val progressMap = remember { mutableStateMapOf<Int, Int>() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val speaker = remember { com.sakinah.app.core.utils.audio.SakinahAudioSpeaker(context) }
+
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { speaker.shutdown() }
+    }
 
     EmotionalCompanionContent(
         emotions = viewModel.emotions,
@@ -65,6 +71,7 @@ fun EmotionalCompanionScreen(
         azkarList = azkarList,
         progressMap = progressMap,
         haptic = haptic,
+        onSpeak = { text -> speaker.speak(text) },
         onSelectEmotion = { emotion ->
             viewModel.selectEmotion(emotion)
             haptic.tick()
@@ -87,6 +94,7 @@ fun EmotionalCompanionContent(
     azkarList: List<ZikrEntity>,
     progressMap: Map<Int, Int>,
     haptic: HapticFeedback?,
+    onSpeak: (String) -> Unit = {},
     onSelectEmotion: (EmotionItem) -> Unit,
     onClearSelection: () -> Unit,
     onZikrTap: (Int, Int) -> Unit,
@@ -195,7 +203,8 @@ fun EmotionalCompanionContent(
                             fontSizeMultiplier = 1.0f,
                             haptic = haptic,
                             onTap = { onZikrTap(zikr.id, zikr.repeatCount) },
-                            onToggleFavorite = {}
+                            onToggleFavorite = {},
+                            onSpeak = { onSpeak(zikr.textWithTashkeel) }
                         )
                     }
                 }

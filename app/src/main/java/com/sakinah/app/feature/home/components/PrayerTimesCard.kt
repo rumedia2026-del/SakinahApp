@@ -40,9 +40,12 @@ import com.sakinah.app.feature.prayer.PrayerScheduleState
 import com.sakinah.app.feature.prayer.PrayerTimesHelper
 import kotlinx.coroutines.delay
 
+import androidx.compose.foundation.clickable
+
 @Composable
 fun PrayerTimesCard(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
 ) {
     var state by remember { mutableStateOf(PrayerTimesHelper.calculateTodayPrayers()) }
 
@@ -63,7 +66,8 @@ fun PrayerTimesCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
-            .border(1.dp, goldAccent.copy(alpha = 0.4f), MaterialTheme.shapes.large),
+            .border(1.dp, goldAccent.copy(alpha = 0.4f), MaterialTheme.shapes.large)
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = deepEmerald),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)

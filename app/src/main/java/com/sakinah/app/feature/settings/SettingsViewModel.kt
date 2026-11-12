@@ -26,7 +26,11 @@ class SettingsViewModel @Inject constructor(
                 fontSizeMultiplier = 1.0f,
                 showTashkeel = true,
                 hapticFeedbackEnabled = true,
+                deafHapticVisualMode = false,
                 autoScrollSpeed = 1.0f,
+                selectedCityName = "رشيد - البحيرة",
+                calculationMethod = "EGYPTIAN",
+                prayerAlarmEnabled = true,
                 morningNotificationTime = "05:30",
                 eveningNotificationTime = "17:00"
             )
@@ -53,6 +57,24 @@ class SettingsViewModel @Inject constructor(
     fun toggleHaptic(enabled: Boolean) {
         viewModelScope.launch {
             preferencesDataStore.setHapticEnabled(enabled)
+        }
+    }
+
+    fun toggleDeafMode(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesDataStore.setDeafHapticVisualMode(enabled)
+        }
+    }
+
+    fun setSelectedCity(cityName: String) {
+        viewModelScope.launch {
+            preferencesDataStore.setSelectedCity(cityName)
+        }
+    }
+
+    fun togglePrayerAlarm(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesDataStore.setPrayerAlarmEnabled(enabled)
         }
     }
 

@@ -2,6 +2,8 @@ package com.sakinah.app.feature.tasbih
 
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -18,11 +20,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.HearingDisabled
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,8 +36,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,6 +53,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sakinah.app.core.ui.theme.SakinahTheme
 import com.sakinah.app.core.ui.theme.SakinahThemeMode
 import com.sakinah.app.core.utils.rememberHapticFeedback
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun TasbihScreen(
@@ -53,29 +66,66 @@ fun TasbihScreen(
 
     val phrase = viewModel.phrases[currentPhraseIndex]
     val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
 
-    TasbihContent(
-        phrase = phrase,
-        count = count,
-        totalCount = totalCount,
-        onTap = {
-            val newCount = viewModel.onScreenTapped()
-            when (newCount) {
-                33, 66 -> haptic.milestone()
-                phrase.target -> haptic.completion()
-                else -> haptic.tasbihTap()
-            }
-        },
-        onSwipeNext = {
-            viewModel.nextPhrase()
-            haptic.swipe()
-        },
-        onSwipePrev = {
-            viewModel.prevPhrase()
-            haptic.swipe()
-        },
-        onReset = viewModel::resetCount
+    var isDeafMode by remember { mutableStateOf(false) }
+    var flashState by remember { mutableStateOf(false) }
+
+    val flashAlpha by animateFloatAsState(
+        targetValue = if (flashState) 0.35f else 0f,
+        animationSpec = tween(120),
+        label = "TasbihFlash"
     )
+
+    val goldAccent = Color(0xFFC8A951)
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        TasbihContent(
+            phrase = phrase,
+            count = count,
+            totalCount = totalCount,
+            isDeafMode = isDeafMode,
+            onToggleDeafMode = {
+                isDeafMode = !isDeafMode
+                if (isDeafMode) haptic.milestone()
+            },
+            onTap = {
+                val newCount = viewModel.onScreenTapped()
+
+                if (isDeafMode) {
+                    scope.launch {
+                        flashState = true
+                        delay(120)
+                        flashState = false
+                    }
+                }
+
+                when (newCount) {
+                    33, 66 -> haptic.milestone()
+                    phrase.target -> haptic.completion()
+                    else -> haptic.tasbihTap()
+                }
+            },
+            onSwipeNext = {
+                viewModel.nextPhrase()
+                haptic.swipe()
+            },
+            onSwipePrev = {
+                viewModel.prevPhrase()
+                haptic.swipe()
+            },
+            onReset = viewModel::resetCount
+        )
+
+        // وميض الشاشة لفاقدي السمع
+        if (flashAlpha > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(goldAccent.copy(alpha = flashAlpha))
+            )
+        }
+    }
 }
 
 @Composable
@@ -83,6 +133,8 @@ fun TasbihContent(
     phrase: TasbihPhrase,
     count: Int,
     totalCount: Int,
+    isDeafMode: Boolean,
+    onToggleDeafMode: () -> Unit,
     onTap: () -> Unit,
     onSwipeNext: () -> Unit,
     onSwipePrev: () -> Unit,
@@ -90,6 +142,7 @@ fun TasbihContent(
     modifier: Modifier = Modifier
 ) {
     val progressFraction = (count.toFloat() / phrase.target.toFloat()).coerceIn(0f, 1f)
+    val goldAccent = Color(0xFFC8A951)
 
     Box(
         modifier = modifier
@@ -98,23 +151,21 @@ fun TasbihContent(
             .pointerInput(Unit) {
                 var totalDrag = 0f
                 detectHorizontalDragGestures(
-                    onDragEnd = {
-                        if (totalDrag > 80f) {
-                            onSwipeNext()
-                        } else if (totalDrag < -80f) {
-                            onSwipePrev()
-                        }
-                        totalDrag = 0f
-                    },
                     onHorizontalDrag = { _, dragAmount ->
                         totalDrag += dragAmount
+                    },
+                    onDragEnd = {
+                        if (totalDrag > 80f) {
+                            onSwipePrev()
+                        } else if (totalDrag < -80f) {
+                            onSwipeNext()
+                        }
+                        totalDrag = 0f
                     }
                 )
             }
-            .pointerInput(phrase.target) {
-                detectTapGestures(
-                    onTap = { onTap() }
-                )
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { onTap() })
             }
             .padding(24.dp)
     ) {
@@ -122,22 +173,41 @@ fun TasbihContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
-                .padding(top = 16.dp),
+                .padding(top = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "إجمالي الجلسة: $totalCount",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            IconButton(onClick = onReset) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "إعادة ضبط",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+            Column {
+                Text(
+                    text = "إجمالي الجلسة: $totalCount",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FilterChip(
+                    selected = isDeafMode,
+                    onClick = onToggleDeafMode,
+                    label = { Text(if (isDeafMode) "فاقدي السمع ✓" else "فاقدي السمع", style = MaterialTheme.typography.labelSmall) },
+                    leadingIcon = {
+                        Icon(Icons.Default.HearingDisabled, contentDescription = null, modifier = Modifier.size(14.dp))
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = goldAccent.copy(alpha = 0.2f),
+                        selectedLabelColor = goldAccent
+                    )
+                )
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                IconButton(onClick = onReset) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "إعادة ضبط",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
@@ -179,92 +249,68 @@ fun TasbihContent(
                 CircularProgressIndicator(
                     progress = { progressFraction },
                     modifier = Modifier.size(240.dp),
-                    strokeWidth = 10.dp,
                     color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    strokeWidth = 14.dp
                 )
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
                     Text(
                         text = "$count",
-                        style = MaterialTheme.typography.displayLarge.copy(fontSize = 72.sp),
+                        style = MaterialTheme.typography.displayLarge.copy(fontSize = 64.sp),
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "الهدف: ${phrase.target}",
+                        text = "من ${phrase.target}",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            Text(
+                text = "المس في أي مكان للتسبيح • اسحب أفقياً لتغيير الذكر",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
         }
 
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
+            IconButton(onClick = onSwipePrev) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(16.dp)
+                    contentDescription = "السابق",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = " اسحب يميناً أو يساراً للتبديل • المس في أي مكان للعدّ ",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
+            }
+
+            Text(
+                text = "${phrase.target} تسبيحة",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            IconButton(onClick = onSwipeNext) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(16.dp)
+                    contentDescription = "التالي",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-//  COMPOSE PREVIEWS — الوضع النهاري والوضع الليلي
-// ═══════════════════════════════════════════════════════════════════
-
-@Preview(name = "Tasbih Screen - Light Warm Paper", showBackground = true)
-@Composable
-private fun TasbihScreenLightPreview() {
-    SakinahTheme(themeMode = SakinahThemeMode.WARM_PAPER) {
-        TasbihContent(
-            phrase = TasbihPhrase(1, "سُبْحَانَ اللَّهِ", "تنزيه الله تعالى عن كل نقص وعيب", 33),
-            count = 14,
-            totalCount = 47,
-            onTap = {},
-            onSwipeNext = {},
-            onSwipePrev = {},
-            onReset = {}
-        )
-    }
-}
-
-@Preview(name = "Tasbih Screen - OLED Black", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
-@Composable
-private fun TasbihScreenDarkPreview() {
-    SakinahTheme(themeMode = SakinahThemeMode.PURE_OLED_BLACK) {
-        TasbihContent(
-            phrase = TasbihPhrase(2, "الْحَمْدُ لِلَّهِ", "الثناء والشكر الكامل للمنعم", 33),
-            count = 33,
-            totalCount = 99,
-            onTap = {},
-            onSwipeNext = {},
-            onSwipePrev = {},
-            onReset = {}
-        )
     }
 }

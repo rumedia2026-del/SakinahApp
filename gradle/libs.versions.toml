@@ -22,6 +22,7 @@ splash = "1.0.1"
 play-services-location = "21.3.0"
 json = "20231013"
 adhan = "1.2.1"
+media3 = "1.5.0"
 
 [libraries]
 # AndroidX Core
@@ -83,6 +84,10 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 
 # Adhan (Offline Prayer Times)
 adhan = { group = "com.batoulapps.adhan", name = "adhan", version.ref = "adhan" }
+
+# Media3 ExoPlayer
+media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
+media3-common = { group = "androidx.media3", name = "media3-common", version.ref = "media3" }
 
 # JSON
 org-json = { group = "org.json", name = "json", version.ref = "json" }

@@ -132,6 +132,10 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.adhan)
 
+    // Media3 ExoPlayer
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.common)
+
     // JSON
     implementation(libs.org.json)
 

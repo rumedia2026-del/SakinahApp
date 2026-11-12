@@ -46,6 +46,9 @@ import com.sakinah.app.core.ui.theme.SakinahTheme
 import com.sakinah.app.core.ui.theme.SakinahThemeMode
 import com.sakinah.app.data.local.db.entities.CategoryEntity
 import com.sakinah.app.feature.home.components.CategoryCard
+import com.sakinah.app.feature.home.components.DailyAyahTadabburCard
+import com.sakinah.app.feature.home.components.DailyWorshipRingsCard
+import com.sakinah.app.feature.home.components.NamesOfAllahCard
 import com.sakinah.app.feature.home.components.PrayerTimesCard
 import com.sakinah.app.feature.home.components.SmartHeroCard
 
@@ -69,6 +72,15 @@ fun HomeScreen(
         },
         onSettingsClick = {
             navController.navigate(Screen.Settings.route)
+        },
+        onPrayerTimesClick = {
+            navController.navigate(Screen.PrayerTimes.route)
+        },
+        onQuranNav = {
+            navController.navigate(Screen.Quran.route)
+        },
+        onTasbihNav = {
+            navController.navigate(Screen.Tasbih.route)
         }
     )
 }
@@ -81,6 +93,9 @@ fun HomeContent(
     onHeroCardClick: () -> Unit,
     onCategoryClick: (Int) -> Unit,
     onSettingsClick: () -> Unit,
+    onPrayerTimesClick: () -> Unit = {},
+    onQuranNav: () -> Unit = {},
+    onTasbihNav: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val goldAccent = Color(0xFFC8A951)
@@ -134,10 +149,22 @@ fun HomeContent(
             ) {
                 // 1. بطاقة مواقيت الصلاة والعد التنازلي التفاعلي
                 item(key = "prayer_times_card") {
-                    PrayerTimesCard()
+                    PrayerTimesCard(onClick = onPrayerTimesClick)
                 }
 
-                // 2. البطاقة الذكية المعتمدة على السياق والوقت
+                // 2. حلقات العبادة اليومية الثلاث (أذكار، قرآن، تسبيح)
+                item(key = "daily_worship_rings") {
+                    DailyWorshipRingsCard(
+                        azkarProgress = 0.70f,
+                        quranProgress = 0.45f,
+                        tasbihProgress = 0.80f,
+                        onAzkarClick = onHeroCardClick,
+                        onQuranClick = onQuranNav,
+                        onTasbihClick = onTasbihNav
+                    )
+                }
+
+                // 3. البطاقة الذكية المعتمدة على السياق والوقت
                 item(key = "smart_hero_card") {
                     SmartHeroCard(
                         contextType = uiState.smartContext,
@@ -145,7 +172,17 @@ fun HomeContent(
                     )
                 }
 
-                // 3. شريط البحث السريع عن الأذكار والأدعية
+                // 4. آية وتدبر اليوم
+                item(key = "daily_ayah_tadabbur") {
+                    DailyAyahTadabburCard(onTadabburClick = onQuranNav)
+                }
+
+                // 5. أسماء الله الحسنى وتأملاتها
+                item(key = "names_of_allah") {
+                    NamesOfAllahCard()
+                }
+
+                // 6. شريط البحث السريع عن الأذكار والأدعية
                 item(key = "search_bar") {
                     OutlinedTextField(
                         value = uiState.searchQuery,

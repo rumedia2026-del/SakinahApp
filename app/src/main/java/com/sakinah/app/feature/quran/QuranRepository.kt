@@ -19,6 +19,8 @@ class QuranRepository @Inject constructor(
 ) {
 
     private var cachedSurahs: List<SurahHeader>? = null
+    private var cachedAllAyahs: List<AyahItem>? = null
+    private var pageMap: Map<Int, List<AyahItem>>? = null
     private var uthmaniJsonRoot: JSONObject? = null
     private var tafsirJsonRoot: JSONObject? = null
 
@@ -84,6 +86,19 @@ class QuranRepository @Inject constructor(
             }
         }
         result
+    }
+
+    suspend fun getAyahsForPage(pageNumber: Int): List<AyahItem> = withContext(Dispatchers.IO) {
+        val safePage = pageNumber.coerceIn(1, 604)
+        if (pageMap == null) {
+            val all = mutableListOf<AyahItem>()
+            for (surahNum in 1..114) {
+                all.addAll(getAyahsForSurah(surahNum))
+            }
+            cachedAllAyahs = all
+            pageMap = all.groupBy { it.page }
+        }
+        pageMap?.get(safePage) ?: emptyList()
     }
 
     private fun ensureUthmaniLoaded() {

@@ -19,6 +19,9 @@ data class QuranUiState(
     val currentAyahs: List<AyahItem> = emptyList(),
     val selectedSurah: SurahHeader? = null,
     val selectedAyahForTafsir: AyahItem? = null,
+    val isPageMode: Boolean = false,
+    val currentPage: Int = 1,
+    val pageAyahs: List<AyahItem> = emptyList(),
     val lastBookmark: Bookmark? = null,
     val khatmahPlan: KhatmahPlan = KhatmahPlan(),
     val searchQuery: String = "",
@@ -66,14 +69,42 @@ class QuranViewModel @Inject constructor(
 
     fun openSurah(surah: SurahHeader) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, selectedSurah = surah)
+            _uiState.value = _uiState.value.copy(isLoading = true, selectedSurah = surah, isPageMode = false)
             val ayahs = quranRepository.getAyahsForSurah(surah.number)
             _uiState.value = _uiState.value.copy(currentAyahs = ayahs, isLoading = false)
         }
     }
 
+    fun openPage(page: Int) {
+        val safePage = page.coerceIn(1, 604)
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, isPageMode = true, currentPage = safePage)
+            val ayahs = quranRepository.getAyahsForPage(safePage)
+            _uiState.value = _uiState.value.copy(pageAyahs = ayahs, isLoading = false)
+        }
+    }
+
+    fun nextPage() {
+        val next = (_uiState.value.currentPage + 1).coerceAtMost(604)
+        openPage(next)
+    }
+
+    fun prevPage() {
+        val prev = (_uiState.value.currentPage - 1).coerceAtLeast(1)
+        openPage(prev)
+    }
+
+    fun togglePageMode() {
+        if (_uiState.value.isPageMode) {
+            _uiState.value = _uiState.value.copy(isPageMode = false)
+        } else {
+            val pageToOpen = _uiState.value.lastBookmark?.ayahGlobalNumber?.let { 1 } ?: 1
+            openPage(pageToOpen)
+        }
+    }
+
     fun closeSurahReader() {
-        _uiState.value = _uiState.value.copy(selectedSurah = null, currentAyahs = emptyList())
+        _uiState.value = _uiState.value.copy(selectedSurah = null, isPageMode = false, currentAyahs = emptyList())
     }
 
     fun showAyahTafsir(ayah: AyahItem) {
@@ -96,15 +127,5 @@ class QuranViewModel @Inject constructor(
 
     fun setFontSizeMultiplier(multiplier: Float) {
         _uiState.value = _uiState.value.copy(fontSizeMultiplier = multiplier.coerceIn(0.8f, 1.6f))
-    }
-
-    fun updateKhatmahPlan(days: Int) {
-        val pagesPerDay = (604 / days.coerceAtLeast(1)).coerceAtLeast(1)
-        _uiState.value = _uiState.value.copy(
-            khatmahPlan = _uiState.value.khatmahPlan.copy(
-                totalDays = days,
-                pagesPerDay = pagesPerDay
-            )
-        )
     }
 }
