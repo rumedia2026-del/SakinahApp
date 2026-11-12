@@ -33,7 +33,8 @@ class EmotionalViewModel @Inject constructor(
         EmotionItem("رزق", "طلب الرزق والبركة", "وارزقنا وأنت خير الرازقين", "🌱"),
         EmotionItem("شكر", "شكر وامتنان", "لئن شكرتم لأزيدنكم", "🌸"),
         EmotionItem("استخارة", "حيرة وتردد", "استخر ربك واستفته يهدك", "🧭"),
-        EmotionItem("مرض", "مرض وألم", "وإذا مرضت فهو يشفين", "🩺")
+        EmotionItem("مرض", "مرض وألم", "وإذا مرضت فهو يشفين", "🩺"),
+        EmotionItem("غضب", "غضب وضيق", "والكاظمين الغيظ والعافين عن الناس", "🔥")
     )
 
     private val _selectedEmotion = MutableStateFlow<EmotionItem?>(null)

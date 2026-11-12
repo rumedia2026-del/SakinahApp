@@ -5,7 +5,15 @@ data class SurahHeader(
     val name: String,
     val englishName: String,
     val revelationType: String,
-    val numberOfAyahs: Int
+    val numberOfAyahs: Int,
+    val startPage: Int = 1
+)
+
+data class JuzItem(
+    val number: Int,
+    val name: String,
+    val startSurahName: String,
+    val startPage: Int
 )
 
 data class AyahItem(

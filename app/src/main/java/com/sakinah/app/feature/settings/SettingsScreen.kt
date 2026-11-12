@@ -27,6 +27,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
@@ -38,6 +41,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.AlertDialog
@@ -300,7 +304,7 @@ fun SettingsScreen(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
 
                         Text(
-                            text = "حجم خط الأذكار (${(preferences.fontSizeMultiplier * 100).toInt()}%)",
+                            text = "حجم خط الأذكار والمصحف (${(preferences.fontSizeMultiplier * 100).toInt()}%)",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Slider(
@@ -308,6 +312,29 @@ fun SettingsScreen(
                             onValueChange = viewModel::setFontSizeMultiplier,
                             valueRange = 0.8f..1.5f
                         )
+
+                        // معاينة حية لآية كريمة
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(emeraldPrimary.copy(alpha = 0.06f))
+                                .border(1.dp, goldAccent.copy(alpha = 0.35f), MaterialTheme.shapes.medium)
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (preferences.showTashkeel) "﴿ اللَّهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ ﴾" else "﴿ الله نور السماوات والارض ﴾",
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize = (20 * preferences.fontSizeMultiplier).sp,
+                                    lineHeight = (36 * preferences.fontSizeMultiplier).sp
+                                ),
+                                fontWeight = FontWeight.Bold,
+                                color = emeraldPrimary,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -661,6 +688,131 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("استعادة الإعدادات الافتراضية للتطبيق", color = MaterialTheme.colorScheme.error)
                         }
+                    }
+                }
+
+                // ═══════════════════════════════════════════════════════════════════
+                // 7. أدوات إسلامية إضافية (التقويم الهجري، حاسبة الزكاة، مصمم البطاقات)
+                // ═══════════════════════════════════════════════════════════════════
+                Card(
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = goldAccent)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "التقويم الهجري والمناسبات الإسلامية",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(goldAccent.copy(alpha = 0.10f))
+                                .padding(12.dp)
+                        ) {
+                            Column {
+                                Text(
+                                    text = "اليوم: ٢٤ جمادى الأولى ١٤٤٨ هـ",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = goldAccent
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "أقرب المناسبات: صيام الأيام البيض القادمة (١٣-١٤-١٥) • شهر رجب بعد ٦٥ يوماً",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // حاسبة الزكاة الشرعية
+                Card(
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Calculate, contentDescription = null, tint = goldAccent)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "حاسبة الزكاة الشرعية (٢.٥%)",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "احسب زكاة مالك فوراً بنسبة ربع العشر (٢.٥%) إذا بلغ النصاب وحال عليه الحول.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        var moneyInput by remember { mutableStateOf("") }
+                        OutlinedTextField(
+                            value = moneyInput,
+                            onValueChange = { moneyInput = it.filter { c -> c.isDigit() || c == '.' } },
+                            label = { Text("إجمالي المال المدخر (بالجنيه/الريال)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+
+                        val amount = moneyInput.toDoubleOrNull() ?: 0.0
+                        if (amount > 0) {
+                            val zakatDue = amount * 0.025
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(MaterialTheme.shapes.small)
+                                    .background(emeraldPrimary.copy(alpha = 0.08f))
+                                    .padding(10.dp)
+                            ) {
+                                Text(
+                                    text = "مبلغ الزكاة الواجب إخراجه: ${"%,.2f".format(zakatDue)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = emeraldPrimary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // مُصمم ومشارك بطاقات الآيات والأذكار
+                Card(
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Brush, contentDescription = null, tint = goldAccent)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "مُصمم بطاقات الآيات والأذكار",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "يمكنك مشاركة أي ذكر أو آية كريمة كبطاقة إيمانية مزخرفة بتوقيع تطبيق سكينة عبر زر المشاركة الموجود في بطاقات الأذكار وتدبر المصحف.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 

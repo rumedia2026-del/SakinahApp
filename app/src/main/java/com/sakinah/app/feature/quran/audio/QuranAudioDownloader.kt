@@ -20,7 +20,7 @@ object QuranAudioDownloader {
 
     fun isSurahDownloaded(context: Context, sheikhId: String, surahNumber: Int): Boolean {
         val file = getSurahFile(context, sheikhId, surahNumber)
-        return file.exists() && file.length() > 1024 // Greater than 1KB
+        return file.exists() && file.length() > 10000 // Greater than 10KB
     }
 
     suspend fun downloadSurah(

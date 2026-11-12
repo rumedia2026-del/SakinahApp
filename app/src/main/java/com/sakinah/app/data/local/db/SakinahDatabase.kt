@@ -25,7 +25,7 @@ import java.io.InputStreamReader
         ZikrEntity::class,
         DailyProgressEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class SakinahDatabase : RoomDatabase() {

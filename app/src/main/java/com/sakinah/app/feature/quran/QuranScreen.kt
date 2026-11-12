@@ -107,6 +107,8 @@ fun QuranScreen(
 
     val sheikhPlayer = remember { SheikhAudioPlayer(context) }
     val isAudioPlaying by sheikhPlayer.isPlaying.collectAsState()
+    val isBuffering by sheikhPlayer.isBuffering.collectAsState()
+    val currentlyPlayingSurah by sheikhPlayer.currentlyPlayingSurah.collectAsState()
     val audioTitle by sheikhPlayer.currentPlayingTitle.collectAsState()
 
     DisposableEffect(Unit) {
@@ -559,120 +561,257 @@ fun QuranScreen(
                         )
                     }
 
-                    // عنوان قائمة السور
-                    item(key = "index_header") {
-                        Text(
-                            text = "فهرس السور (١١٤ سورة)",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
+                    // شريط التصفية والتبويب الموحد للمصحف
+                    item(key = "filter_tabs_row") {
+                        val filterTabs = listOf(
+                            "ALL" to "الكل",
+                            "MECCAN" to "مكية",
+                            "MEDINAN" to "مدنية",
+                            "DOWNLOADED" to "المحمّلة أوفلاين",
+                            "JUZ" to "الأجزاء الـ ٣٠"
                         )
-                    }
-
-                    // قائمة السور الـ 114 مع أزرار الاستماع والتحميل أوفلاين
-                    items(
-                        items = uiState.filteredSurahs,
-                        key = { it.number }
-                    ) { surah ->
-                        val isDownloaded = uiState.downloadedSurahs.contains(surah.number)
-                        val isDownloading = (uiState.downloadingSurahNumber == surah.number)
-
-                        Card(
-                            shape = MaterialTheme.shapes.medium,
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Row(
+                            items(filterTabs) { (key, label) ->
+                                val isSelected = (uiState.selectedFilterTab == key)
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { viewModel.setFilterTab(key) },
+                                    label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = emeraldPrimary,
+                                        selectedLabelColor = Color.White
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    if (uiState.selectedFilterTab == "JUZ") {
+                        // عرض فهرس الأجزاء الـ 30
+                        item(key = "juz_header") {
+                            Text(
+                                text = "فهرس الأجزاء (٣٠ جزءاً)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+
+                        items(
+                            items = uiState.juzList,
+                            key = { "juz_${it.number}" }
+                        ) { juz ->
+                            Card(
+                                shape = MaterialTheme.shapes.medium,
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .clickable {
+                                        viewModel.openPage(juz.startPage)
+                                        haptic.tick()
+                                    }
                             ) {
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
-                                        .weight(1f)
-                                        .clickable {
-                                            viewModel.openPage(1)
-                                        }
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(CircleShape)
-                                            .background(goldAccent.copy(alpha = 0.15f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = toArabicDigits(surah.number),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = goldAccent
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(
-                                            text = surah.name,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "${surah.revelationType} • ${toArabicDigits(surah.numberOfAyahs)} آية",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    // زر تشغيل التلاوة
-                                    IconButton(
-                                        onClick = {
-                                            if (isAudioPlaying) {
-                                                sheikhPlayer.stop()
-                                            } else {
-                                                sheikhPlayer.playSurah(uiState.selectedSheikhId, surah.number, surah.name)
-                                            }
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isAudioPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                            contentDescription = "استماع",
-                                            tint = emeraldPrimary
-                                        )
-                                    }
-
-                                    // زر التحميل أوفلاين
-                                    if (isDownloaded) {
-                                        Icon(
-                                            imageVector = Icons.Default.CheckCircle,
-                                            contentDescription = "محمّل أوفلاين",
-                                            tint = emeraldPrimary,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    } else if (isDownloading) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            CircularProgressIndicator(
-                                                progress = { uiState.downloadProgress },
-                                                modifier = Modifier.size(24.dp),
-                                                strokeWidth = 2.dp,
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(38.dp)
+                                                .clip(CircleShape)
+                                                .background(goldAccent.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = toArabicDigits(juz.number),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
                                                 color = goldAccent
                                             )
                                         }
-                                    } else {
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = juz.name,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "يبدأ من ${juz.startSurahName}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(MaterialTheme.shapes.extraSmall)
+                                            .background(emeraldPrimary.copy(alpha = 0.08f))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "صفحة ${toArabicDigits(juz.startPage)}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = emeraldPrimary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // عنوان قائمة السور
+                        item(key = "index_header") {
+                            Text(
+                                text = "فهرس السور (${toArabicDigits(uiState.filteredSurahs.size)} سورة)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+
+                        // قائمة السور الـ 114 مع أزرار الاستماع المنفصلة والتحميل أوفلاين
+                        items(
+                            items = uiState.filteredSurahs,
+                            key = { it.number }
+                        ) { surah ->
+                            val isDownloaded = uiState.downloadedSurahs.contains(surah.number)
+                            val isDownloading = (uiState.downloadingSurahNumber == surah.number)
+                            val isThisSurahPlaying = (isAudioPlaying && currentlyPlayingSurah == surah.number)
+                            val isThisSurahBuffering = (isBuffering && currentlyPlayingSurah == surah.number)
+
+                            Card(
+                                shape = MaterialTheme.shapes.medium,
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable {
+                                                viewModel.openPage(surah.startPage)
+                                                haptic.tick()
+                                            }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(goldAccent.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = toArabicDigits(surah.number),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = goldAccent
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = surah.name,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = "${surah.revelationType} • ${toArabicDigits(surah.numberOfAyahs)} آية",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "• ص ${toArabicDigits(surah.startPage)}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = goldAccent,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        // زر تشغيل التلاوة المخصص لهذه السورة فقط
                                         IconButton(
                                             onClick = {
-                                                viewModel.downloadSurah(context, surah.number)
+                                                if (isThisSurahPlaying) {
+                                                    sheikhPlayer.stop()
+                                                } else {
+                                                    sheikhPlayer.playSurah(uiState.selectedSheikhId, surah.number, surah.name)
+                                                }
                                             }
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Download,
-                                                contentDescription = "تحميل للاستماع أوفلاين",
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                            if (isThisSurahBuffering) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(20.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = emeraldPrimary
+                                                )
+                                            } else {
+                                                Icon(
+                                                    imageVector = if (isThisSurahPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                    contentDescription = "استماع",
+                                                    tint = if (isThisSurahPlaying) goldAccent else emeraldPrimary
+                                                )
+                                            }
+                                        }
+
+                                        // زر التحميل أوفلاين
+                                        if (isDownloaded) {
+                                            IconButton(
+                                                onClick = {
+                                                    viewModel.deleteDownloadedSurah(context, surah.number)
+                                                    haptic.tick()
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CheckCircle,
+                                                    contentDescription = "محمّل أوفلاين - انقر للحذف",
+                                                    tint = emeraldPrimary,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        } else if (isDownloading) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                CircularProgressIndicator(
+                                                    progress = { uiState.downloadProgress },
+                                                    modifier = Modifier.size(24.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = goldAccent
+                                                )
+                                            }
+                                        } else {
+                                            IconButton(
+                                                onClick = {
+                                                    viewModel.downloadSurah(context, surah.number)
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Download,
+                                                    contentDescription = "تحميل للاستماع أوفلاين",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                         }
                                     }
                                 }

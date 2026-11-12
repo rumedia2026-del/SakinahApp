@@ -7,6 +7,7 @@ import com.sakinah.app.feature.quran.audio.QuranAudioDownloader
 import com.sakinah.app.feature.quran.audio.QuranSheikhManager
 import com.sakinah.app.feature.quran.model.AyahItem
 import com.sakinah.app.feature.quran.model.Bookmark
+import com.sakinah.app.feature.quran.model.JuzItem
 import com.sakinah.app.feature.quran.model.KhatmahPlan
 import com.sakinah.app.feature.quran.model.SurahHeader
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +34,8 @@ data class QuranUiState(
     val lastBookmark: Bookmark? = null,
     val khatmahPlan: KhatmahPlan = KhatmahPlan(),
     val searchQuery: String = "",
+    val selectedFilterTab: String = "ALL", // ALL, MECCAN, MEDINAN, DOWNLOADED, JUZ, BOOKMARK
+    val juzList: List<JuzItem> = emptyList(),
     val fontSizeMultiplier: Float = 1.0f,
     val isLoading: Boolean = false
 )
@@ -54,27 +57,52 @@ class QuranViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true)
             val list = quranRepository.getSurahsList()
             val allPages = quranRepository.getAllPages()
+            val juzList = quranRepository.getJuzList()
             _uiState.value = _uiState.value.copy(
                 surahs = list,
                 filteredSurahs = list,
                 pagesMap = allPages,
+                juzList = juzList,
                 isLoading = false,
                 lastBookmark = Bookmark(1, "سُورَةُ ٱلْفَاتِحَةِ", 1, 1)
             )
         }
     }
 
+    fun setFilterTab(tab: String) {
+        _uiState.value = _uiState.value.copy(selectedFilterTab = tab)
+        applyFilters()
+    }
+
     fun onSearchQueryChanged(query: String) {
+        _uiState.value = _uiState.value.copy(searchQuery = query)
+        applyFilters()
+    }
+
+    private fun applyFilters() {
+        val query = _uiState.value.searchQuery.trim()
+        val tab = _uiState.value.selectedFilterTab
+        val downloaded = _uiState.value.downloadedSurahs
+
+        var base = _uiState.value.surahs
+
+        base = when (tab) {
+            "MECCAN" -> base.filter { it.revelationType == "مكية" }
+            "MEDINAN" -> base.filter { it.revelationType == "مدنية" }
+            "DOWNLOADED" -> base.filter { downloaded.contains(it.number) }
+            else -> base
+        }
+
         val filtered = if (query.isBlank()) {
-            _uiState.value.surahs
+            base
         } else {
-            _uiState.value.surahs.filter {
-                it.name.contains(query.trim(), ignoreCase = true) ||
-                        it.englishName.contains(query.trim(), ignoreCase = true) ||
-                        it.number.toString() == query.trim()
+            base.filter {
+                it.name.contains(query, ignoreCase = true) ||
+                        it.englishName.contains(query, ignoreCase = true) ||
+                        it.number.toString() == query
             }
         }
-        _uiState.value = _uiState.value.copy(searchQuery = query, filteredSurahs = filtered)
+        _uiState.value = _uiState.value.copy(filteredSurahs = filtered)
     }
 
     fun openSurah(surah: SurahHeader) {

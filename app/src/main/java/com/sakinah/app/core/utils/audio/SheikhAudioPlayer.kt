@@ -27,6 +27,9 @@ class SheikhAudioPlayer(context: Context) {
     private val _isBuffering = MutableStateFlow(false)
     val isBuffering: StateFlow<Boolean> = _isBuffering.asStateFlow()
 
+    private val _currentlyPlayingSurah = MutableStateFlow<Int?>(null)
+    val currentlyPlayingSurah: StateFlow<Int?> = _currentlyPlayingSurah.asStateFlow()
+
     private val _currentPlayingTitle = MutableStateFlow<String?>(null)
     val currentPlayingTitle: StateFlow<String?> = _currentPlayingTitle.asStateFlow()
 
@@ -57,6 +60,7 @@ class SheikhAudioPlayer(context: Context) {
                         _isBuffering.value = (playbackState == Player.STATE_BUFFERING)
                         if (playbackState == Player.STATE_ENDED) {
                             _isPlaying.value = false
+                            _currentlyPlayingSurah.value = null
                             _currentPlayingTitle.value = null
                             onTrackCompletedCallback?.invoke()
                         }
@@ -88,6 +92,7 @@ class SheikhAudioPlayer(context: Context) {
         onTrackCompletedCallback = onComplete
 
         val reciter = QuranSheikhManager.getReciterById(sheikhId)
+        _currentlyPlayingSurah.value = surahNumber
         _currentPlayingTitle.value = "$surahName بصوت ${reciter.nameAr}"
 
         val localFile = QuranAudioDownloader.getSurahFile(appContext, sheikhId, surahNumber)
@@ -155,6 +160,7 @@ class SheikhAudioPlayer(context: Context) {
     fun stop() {
         exoPlayer?.stop()
         _isPlaying.value = false
+        _currentlyPlayingSurah.value = null
         _currentPlayingTitle.value = null
     }
 
@@ -163,6 +169,7 @@ class SheikhAudioPlayer(context: Context) {
         exoPlayer = null
         _isPlaying.value = false
         _isBuffering.value = false
+        _currentlyPlayingSurah.value = null
     }
 
     fun clearError() {

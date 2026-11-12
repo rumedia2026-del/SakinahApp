@@ -69,12 +69,31 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.sakinah.app.core.navigation.Screen
-import com.sakinah.app.core.utils.audio.SakinahAudioSpeaker
 import com.sakinah.app.core.utils.audio.SheikhAudioPlayer
 import com.sakinah.app.core.utils.rememberHapticFeedback
+import com.sakinah.app.data.local.db.entities.ZikrEntity
 import com.sakinah.app.feature.azkar.components.ZikrCardItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private fun getZikrAudioUrl(zikr: ZikrEntity): String {
+    if (!zikr.audioUrl.isNullOrBlank()) return zikr.audioUrl
+    val text = zikr.textPlain
+    return when {
+        text.contains("الله لا اله الا هو الحي القيوم") || text.contains("اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ") ->
+            "https://everyayah.com/data/Alafasy_128kbps/002255.mp3"
+        text.contains("قل هو الله احد") || text.contains("قُلْ هُوَ اللَّهُ أَحَدٌ") ->
+            "https://everyayah.com/data/Alafasy_128kbps/112001.mp3"
+        text.contains("قل اعوذ برب الفلق") || text.contains("قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ") ->
+            "https://everyayah.com/data/Alafasy_128kbps/113001.mp3"
+        text.contains("قل اعوذ برب الناس") || text.contains("قُلْ أَعُوذُ بِرَبِّ النَّاسِ") ->
+            "https://everyayah.com/data/Alafasy_128kbps/114001.mp3"
+        text.contains("امن الرسول") || text.contains("آمَنَ الرَّسُولُ") ->
+            "https://everyayah.com/data/Alafasy_128kbps/002285.mp3"
+        else ->
+            "https://everyayah.com/data/Alafasy_128kbps/001001.mp3"
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,12 +107,12 @@ fun AzkarListScreen(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val speaker = remember { SakinahAudioSpeaker(context) }
     val sheikhPlayer = remember { SheikhAudioPlayer(context) }
+    val isAudioPlaying by sheikhPlayer.isPlaying.collectAsState()
+    var currentlyPlayingZikrId by remember { mutableStateOf<Int?>(null) }
 
     DisposableEffect(Unit) {
         onDispose {
-            speaker.shutdown()
             sheikhPlayer.release()
         }
     }
@@ -152,22 +171,26 @@ fun AzkarListScreen(
                             }
                         },
                         actions = {
-                            // زر الاستماع للورد كاملاً
+                            // زر الاستماع للورد كاملاً بصوت الشيخ الحقيقي
                             IconButton(
                                 onClick = {
                                     if (isPlayingFullWird) {
                                         sheikhPlayer.stop()
                                         isPlayingFullWird = false
+                                        currentlyPlayingZikrId = null
                                     } else {
                                         isPlayingFullWird = true
                                         coroutineScope.launch {
-                                            for (zikr in uiState.azkarList) {
+                                            for ((idx, zikr) in uiState.azkarList.withIndex()) {
                                                 if (!isPlayingFullWird) break
-                                                val txt = if (showTashkeel) zikr.textWithTashkeel else zikr.textPlain
-                                                speaker.speak(txt)
-                                                delay(4000)
+                                                currentlyPlayingZikrId = zikr.id
+                                                listState.animateScrollToItem(idx)
+                                                val url = getZikrAudioUrl(zikr)
+                                                sheikhPlayer.playUrl(url)
+                                                delay(4500)
                                             }
                                             isPlayingFullWird = false
+                                            currentlyPlayingZikrId = null
                                         }
                                     }
                                 }
@@ -358,12 +381,15 @@ fun AzkarListScreen(
                             onToggleFavorite = {
                                 viewModel.toggleFavorite(zikr)
                             },
-                            onSpeak = {
-                                if (!zikr.audioUrl.isNullOrBlank()) {
-                                    sheikhPlayer.playUrl(zikr.audioUrl)
+                            isPlayingAudio = (isAudioPlaying && currentlyPlayingZikrId == zikr.id),
+                            onPlayAudio = {
+                                if (isAudioPlaying && currentlyPlayingZikrId == zikr.id) {
+                                    sheikhPlayer.stop()
+                                    currentlyPlayingZikrId = null
                                 } else {
-                                    val speechText = if (showTashkeel) zikr.textWithTashkeel else zikr.textPlain
-                                    speaker.speak(speechText)
+                                    currentlyPlayingZikrId = zikr.id
+                                    val url = getZikrAudioUrl(zikr)
+                                    sheikhPlayer.playUrl(url)
                                 }
                             }
                         )

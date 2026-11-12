@@ -131,7 +131,7 @@ fun SakinahNavGraph() {
                 EmotionalCompanionScreen(navController = navController)
             }
             composable(Screen.WirdBuilder.route) {
-                WirdBuilderScreen()
+                WirdBuilderScreen(navController = navController)
             }
 
             // ── شاشة عرض الأذكار بالتصنيف ──
