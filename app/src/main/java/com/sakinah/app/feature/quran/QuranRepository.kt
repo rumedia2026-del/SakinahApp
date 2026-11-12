@@ -88,8 +88,7 @@ class QuranRepository @Inject constructor(
         result
     }
 
-    suspend fun getAyahsForPage(pageNumber: Int): List<AyahItem> = withContext(Dispatchers.IO) {
-        val safePage = pageNumber.coerceIn(1, 604)
+    suspend fun getAllPages(): Map<Int, List<AyahItem>> = withContext(Dispatchers.IO) {
         if (pageMap == null) {
             val all = mutableListOf<AyahItem>()
             for (surahNum in 1..114) {
@@ -98,7 +97,13 @@ class QuranRepository @Inject constructor(
             cachedAllAyahs = all
             pageMap = all.groupBy { it.page }
         }
-        pageMap?.get(safePage) ?: emptyList()
+        pageMap ?: emptyMap()
+    }
+
+    suspend fun getAyahsForPage(pageNumber: Int): List<AyahItem> = withContext(Dispatchers.IO) {
+        val safePage = pageNumber.coerceIn(1, 604)
+        val all = getAllPages()
+        all[safePage] ?: emptyList()
     }
 
     private fun ensureUthmaniLoaded() {

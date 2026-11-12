@@ -359,8 +359,12 @@ fun AzkarListScreen(
                                 viewModel.toggleFavorite(zikr)
                             },
                             onSpeak = {
-                                val speechText = if (showTashkeel) zikr.textWithTashkeel else zikr.textPlain
-                                speaker.speak(speechText)
+                                if (!zikr.audioUrl.isNullOrBlank()) {
+                                    sheikhPlayer.playUrl(zikr.audioUrl)
+                                } else {
+                                    val speechText = if (showTashkeel) zikr.textWithTashkeel else zikr.textPlain
+                                    speaker.speak(speechText)
+                                }
                             }
                         )
                     }

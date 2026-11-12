@@ -1,20 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Simple crescent moon icon for Sakinah app -->
-    <group android:translateX="54" android:translateY="54">
-        <path
-            android:fillColor="#1B5E20"
-            android:pathData="M0,-28 C15.5,-28 28,-15.5 28,0 C28,15.5 15.5,28 0,28 C-15.5,28 -28,15.5 -28,0 C-28,-15.5 -15.5,-28 0,-28 Z" />
-        <path
-            android:fillColor="#FAF8F5"
-            android:pathData="M8,-24 C20,-20 28,-10 28,0 C28,10 20,20 8,24 C-5,20 -14,10 -14,0 C-14,-10 -5,-20 8,-24 Z" />
-        <!-- Star -->
-        <path
-            android:fillColor="#1B5E20"
-            android:pathData="M20,-10 L21.5,-6 L25.5,-6 L22.5,-3.5 L23.5,0.5 L20,-2 L16.5,0.5 L17.5,-3.5 L14.5,-6 L18.5,-6 Z" />
-    </group>
-</vector>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:drawable="@drawable/sakinah_logo"
+        android:gravity="center"
+        android:width="76dp"
+        android:height="76dp" />
+</layer-list>

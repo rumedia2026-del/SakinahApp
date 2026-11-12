@@ -1,12 +1,17 @@
 package com.sakinah.app.core.utils.audio
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
-import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.sakinah.app.feature.quran.audio.QuranAudioDownloader
+import com.sakinah.app.feature.quran.audio.QuranSheikhManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,8 +24,14 @@ class SheikhAudioPlayer(context: Context) {
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
-    private val _currentTrackIndex = MutableStateFlow<Int?>(null)
-    val currentTrackIndex: StateFlow<Int?> = _currentTrackIndex.asStateFlow()
+    private val _isBuffering = MutableStateFlow(false)
+    val isBuffering: StateFlow<Boolean> = _isBuffering.asStateFlow()
+
+    private val _currentPlayingTitle = MutableStateFlow<String?>(null)
+    val currentPlayingTitle: StateFlow<String?> = _currentPlayingTitle.asStateFlow()
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     private var onTrackCompletedCallback: (() -> Unit)? = null
 
@@ -29,26 +40,71 @@ class SheikhAudioPlayer(context: Context) {
     }
 
     private fun initPlayer() {
-        exoPlayer = ExoPlayer.Builder(appContext).build().apply {
-            addListener(object : Player.Listener {
-                override fun onIsPlayingChanged(playing: Boolean) {
-                    _isPlaying.value = playing
-                }
+        val audioAttributes = AudioAttributes.Builder()
+            .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
+            .setUsage(C.USAGE_MEDIA)
+            .build()
 
-                override fun onPlaybackStateChanged(playbackState: Int) {
-                    if (playbackState == Player.STATE_ENDED) {
-                        _isPlaying.value = false
-                        onTrackCompletedCallback?.invoke()
+        exoPlayer = ExoPlayer.Builder(appContext)
+            .setAudioAttributes(audioAttributes, true)
+            .build().apply {
+                addListener(object : Player.Listener {
+                    override fun onIsPlayingChanged(playing: Boolean) {
+                        _isPlaying.value = playing
                     }
-                }
-            })
-        }
+
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        _isBuffering.value = (playbackState == Player.STATE_BUFFERING)
+                        if (playbackState == Player.STATE_ENDED) {
+                            _isPlaying.value = false
+                            _currentPlayingTitle.value = null
+                            onTrackCompletedCallback?.invoke()
+                        }
+                    }
+
+                    override fun onPlayerError(error: PlaybackException) {
+                        _isPlaying.value = false
+                        _isBuffering.value = false
+                        if (!isNetworkAvailable()) {
+                            _errorMessage.value = "لا يوجد اتصال بالإنترنت، يرجى الاتصال أو تحميل السورة للاستماع أوفلاين"
+                        } else {
+                            _errorMessage.value = "تعذر تشغيل الصوت، جاري المحاولة مرة أخرى..."
+                        }
+                    }
+                })
+            }
     }
 
     /**
-     * تشغيل تلاوة آية قرآنية بصوت الشيخ مشاري راشد العفاسي من EveryAyah
-     * @param surahNum رقم السورة (1-114)
-     * @param ayahNumInSurah رقم الآية في السورة
+     * تشغيل سورة كاملة مع فحص الملف المحلي المحمّل أولاً
+     */
+    fun playSurah(
+        sheikhId: String,
+        surahNumber: Int,
+        surahName: String = "",
+        onComplete: (() -> Unit)? = null
+    ) {
+        _errorMessage.value = null
+        onTrackCompletedCallback = onComplete
+
+        val reciter = QuranSheikhManager.getReciterById(sheikhId)
+        _currentPlayingTitle.value = "$surahName بصوت ${reciter.nameAr}"
+
+        val localFile = QuranAudioDownloader.getSurahFile(appContext, sheikhId, surahNumber)
+        val mediaItem = if (QuranAudioDownloader.isSurahDownloaded(appContext, sheikhId, surahNumber)) {
+            // تشغيل الملف المحلي أوفلاين 100%
+            MediaItem.fromUri(Uri.fromFile(localFile))
+        } else {
+            // تشغيل البث المباشر أونلاين
+            val onlineUrl = QuranSheikhManager.getSurahOnlineUrl(sheikhId, surahNumber)
+            MediaItem.fromUri(Uri.parse(onlineUrl))
+        }
+
+        playMediaItem(mediaItem)
+    }
+
+    /**
+     * تشغيل آية قرآنية بصوت الشيخ مشاري العفاسي
      */
     fun playQuranAyah(surahNum: Int, ayahNumInSurah: Int, onComplete: (() -> Unit)? = null) {
         val s = String.format("%03d", surahNum)
@@ -57,16 +113,30 @@ class SheikhAudioPlayer(context: Context) {
         playUrl(url, onComplete)
     }
 
+    fun playAyah(surahNum: Int, ayahNumInSurah: Int, onComplete: (() -> Unit)? = null) {
+        playQuranAyah(surahNum, ayahNumInSurah, onComplete)
+    }
+
     /**
-     * تشغيل مقطع صوتي عبر رابط مباشر مع دعم الاستماع التلقائي
+     * تشغيل مقطع صوتي عبر رابط مباشر
      */
     fun playUrl(url: String, onComplete: (() -> Unit)? = null) {
+        _errorMessage.value = null
         onTrackCompletedCallback = onComplete
+        try {
+            val mediaItem = MediaItem.fromUri(Uri.parse(url))
+            playMediaItem(mediaItem)
+        } catch (e: Exception) {
+            _errorMessage.value = "تعذر تشغيل الرابط الصوتي"
+            _isPlaying.value = false
+        }
+    }
+
+    private fun playMediaItem(mediaItem: MediaItem) {
         try {
             exoPlayer?.let { player ->
                 player.stop()
                 player.clearMediaItems()
-                val mediaItem = MediaItem.fromUri(Uri.parse(url))
                 player.setMediaItem(mediaItem)
                 player.prepare()
                 player.play()
@@ -77,10 +147,6 @@ class SheikhAudioPlayer(context: Context) {
         }
     }
 
-    fun playAyah(surahNum: Int, ayahNumInSurah: Int, onComplete: (() -> Unit)? = null) {
-        playQuranAyah(surahNum, ayahNumInSurah, onComplete)
-    }
-
     fun pause() {
         exoPlayer?.pause()
         _isPlaying.value = false
@@ -89,12 +155,24 @@ class SheikhAudioPlayer(context: Context) {
     fun stop() {
         exoPlayer?.stop()
         _isPlaying.value = false
-        _currentTrackIndex.value = null
+        _currentPlayingTitle.value = null
     }
 
     fun release() {
         exoPlayer?.release()
         exoPlayer = null
         _isPlaying.value = false
+        _isBuffering.value = false
+    }
+
+    fun clearError() {
+        _errorMessage.value = null
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+        val network = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(network) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 }

@@ -83,15 +83,15 @@ fun ZikrCardItem(
     val goldAccent = Color(0xFFC8A951)
     val emeraldPrimary = Color(0xFF0F3D2E)
 
-    // تصميم هادئ وفاخر: عند الاكتمال تصبح الخلفية خضراء زمردية شفافة بنسبة 6% مع إطار ذهبي رفيع 1dp
+    // تصميم هادئ ونظيف: عند الاكتمال تصبح الخلفية خضراء زمردية شفافة بنسبة 5% فقط مع إطار ذهبي رفيع 1dp وبدون أي تظليل رمادي
     val cardBackground = if (isCompleted) {
-        emeraldPrimary.copy(alpha = 0.06f)
+        Color(0xFF0F3D2E).copy(alpha = 0.05f)
     } else {
         MaterialTheme.colorScheme.surface
     }
 
     val cardBorderColor = if (isCompleted) {
-        goldAccent.copy(alpha = 0.5f)
+        goldAccent.copy(alpha = 0.4f)
     } else {
         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     }
@@ -117,7 +117,7 @@ fun ZikrCardItem(
             },
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = cardBackground),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isCompleted) 0.5.dp else 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
