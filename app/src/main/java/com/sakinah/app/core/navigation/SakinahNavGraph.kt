@@ -6,10 +6,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.SelfImprovement
+import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
@@ -33,6 +35,7 @@ import com.sakinah.app.feature.azkar.AzkarListScreen
 import com.sakinah.app.feature.azkar.ZenModeScreen
 import com.sakinah.app.feature.emotional.EmotionalCompanionScreen
 import com.sakinah.app.feature.home.HomeScreen
+import com.sakinah.app.feature.quran.QuranScreen
 import com.sakinah.app.feature.settings.SettingsScreen
 import com.sakinah.app.feature.tasbih.TasbihScreen
 import com.sakinah.app.feature.wird.WirdBuilderScreen
@@ -46,6 +49,7 @@ private data class BottomNavItem(
 
 private val navItems = listOf(
     BottomNavItem(Screen.Home, "الرئيسية", Icons.Filled.Home, Icons.Outlined.Home),
+    BottomNavItem(Screen.Quran, "المصحف", Icons.Filled.AutoStories, Icons.Outlined.AutoStories),
     BottomNavItem(Screen.Tasbih, "المسبحة", Icons.Filled.SelfImprovement, Icons.Outlined.SelfImprovement),
     BottomNavItem(Screen.EmotionalCompanion, "مشاعري", Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder),
     BottomNavItem(Screen.WirdBuilder, "وردي", Icons.Filled.Book, Icons.Outlined.Book)
@@ -116,6 +120,9 @@ fun SakinahNavGraph() {
             // ── التبويبات الأربعة الرئيسية ──
             composable(Screen.Home.route) {
                 HomeScreen(navController = navController)
+            }
+            composable(Screen.Quran.route) {
+                QuranScreen()
             }
             composable(Screen.Tasbih.route) {
                 TasbihScreen()

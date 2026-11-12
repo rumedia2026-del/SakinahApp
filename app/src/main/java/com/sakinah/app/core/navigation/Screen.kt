@@ -15,6 +15,9 @@ sealed class Screen(val route: String) {
     /** الشاشة الرئيسية الذكية */
     data object Home : Screen("home")
 
+    /** قسم المصحف الشريف كاملاً */
+    data object Quran : Screen("quran")
+
     /** شاشة قائمة الأذكار بالتصنيف */
     data object AzkarList : Screen("azkar_list/{categoryId}") {
         fun createRoute(categoryId: Int) = "azkar_list/$categoryId"
