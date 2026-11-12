@@ -39,6 +39,19 @@ object BackupRestoreHelper {
         return root.toString(2)
     }
 
+    suspend fun exportToJson(
+        context: Context,
+        uri: Uri,
+        azkarRepository: AzkarRepository
+    ): Int {
+        val jsonString = createBackupJson(azkarRepository)
+        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+            outputStream.write(jsonString.toByteArray(Charsets.UTF_8))
+        }
+        val root = JSONObject(jsonString)
+        return root.optJSONArray("azkar")?.length() ?: 0
+    }
+
     suspend fun restoreFromJson(
         context: Context,
         uri: Uri,
