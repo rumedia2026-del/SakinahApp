@@ -1,7 +1,6 @@
 package com.sakinah.app.feature.home.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,8 +34,15 @@ fun CategoryCard(
         3 -> "🕌"
         4 -> "🌙"
         5 -> "⏰"
-        6 -> "💚"
-        else -> "📖"
+        6 -> "💧"
+        7 -> "🕋"
+        8 -> "🏡"
+        9 -> "🍽️"
+        10 -> "✈️"
+        11 -> "💚"
+        12 -> "🛡️"
+        13 -> "📖"
+        else -> "✨"
     }
 
     Card(
@@ -48,7 +54,7 @@ fun CategoryCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp)
     ) {
         Row(
             modifier = Modifier

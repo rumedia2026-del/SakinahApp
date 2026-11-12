@@ -2,11 +2,13 @@ package com.sakinah.app.feature.azkar.components
 
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -61,6 +64,7 @@ fun ZikrCardItem(
     haptic: HapticFeedback,
     onTap: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onSpeak: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -68,12 +72,21 @@ fun ZikrCardItem(
     val isCompleted = currentCount >= zikr.repeatCount
 
     val displayText = if (showTashkeel) zikr.textWithTashkeel else zikr.textPlain
-    val progressFraction = (currentCount.toFloat() / zikr.repeatCount.toFloat()).coerceIn(0f, 1f)
+    val targetProgress = (currentCount.toFloat() / zikr.repeatCount.toFloat()).coerceIn(0f, 1f)
+    val animatedProgress by animateFloatAsState(targetValue = targetProgress, label = "ZikrRingProgress")
+
+    val goldAccent = Color(0xFFC8A951)
+    val emeraldPrimary = Color(0xFF0F3D2E)
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
+            .border(
+                width = if (isCompleted) 1.5.dp else 1.dp,
+                color = if (isCompleted) goldAccent else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                shape = MaterialTheme.shapes.large
+            )
             .clickable {
                 if (!isCompleted) {
                     onTap()
@@ -87,41 +100,60 @@ fun ZikrCardItem(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = if (isCompleted) {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
             } else {
                 MaterialTheme.colorScheme.surface
             }
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isCompleted) 1.dp else 3.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(20.dp)
         ) {
-            // شريط الإجراءات العلوي (المفضلة، شارة التكرار، وزر المشاركة كصورة)
+            // شريط الإجراءات العلوي
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // شارة عدد التكرارات المطلوبة والمتبقية
+                // شارة عدد التكرار
                 Box(
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.small)
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .background(
+                            if (isCompleted) goldAccent.copy(alpha = 0.2f)
+                            else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                        )
+                        .padding(horizontal = 12.dp, vertical = 5.dp)
                 ) {
                     Text(
-                        text = "التكرار: $currentCount / ${zikr.repeatCount}",
+                        text = if (isCompleted) "تم بحمد الله ✓" else "التكرار: $currentCount / ${zikr.repeatCount}",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = if (isCompleted) goldAccent else MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // زر مشاركة الذكر كبطاقة تصميمية أنيقة
+                    // زر القراءة الصوتية بالذكاء الاصطناعي
+                    if (onSpeak != null) {
+                        IconButton(
+                            onClick = onSpeak,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.VolumeUp,
+                                contentDescription = "استماع للذكر",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+
+                    // زر مشاركة كصورة
                     IconButton(
                         onClick = {
                             ZikrCardGenerator.shareZikrAsImage(context, zikr, showTashkeel)
@@ -130,13 +162,13 @@ fun ZikrCardItem(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "مشاركة كصورة",
+                            contentDescription = "مشاركة كبطاقة",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(19.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
 
                     IconButton(
                         onClick = onToggleFavorite,
@@ -153,27 +185,26 @@ fun ZikrCardItem(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // نص الذكر الرئيسي
+            // نص الذكر الشريف
             Text(
                 text = displayText,
                 style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = (21 * fontSizeMultiplier).sp,
-                    lineHeight = (38 * fontSizeMultiplier).sp
+                    fontSize = (22 * fontSizeMultiplier).sp,
+                    lineHeight = (40 * fontSizeMultiplier).sp
                 ),
                 color = if (isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Right,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // زر العداد التفاعلي الدائري بالأسفل
+            // أسفل البطاقة: الفضل والعداد الدائري المتحرك
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // زر إظهار/إخفاء الفضل والتخريج
                 if (!zikr.virtueText.isNullOrBlank() || !zikr.sourceReference.isNullOrBlank()) {
                     Row(
                         modifier = Modifier
@@ -183,9 +214,10 @@ fun ZikrCardItem(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (isExpanded) "إخفاء الفضل" else "عرض الفضل والمصدر",
+                            text = if (isExpanded) "إخفاء التفاصيل" else "فضل الذكر وتخريجه",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
                         )
                         Icon(
                             imageVector = if (isExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
@@ -198,25 +230,25 @@ fun ZikrCardItem(
                     Spacer(modifier = Modifier.width(1.dp))
                 }
 
-                // العداد الدائري اللمسي
+                // حلقة التقدم الدائرية المتحركة الفخمة
                 Box(
-                    modifier = Modifier.size(56.dp),
+                    modifier = Modifier.size(60.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
-                        progress = { progressFraction },
-                        modifier = Modifier.size(56.dp),
-                        color = MaterialTheme.colorScheme.primary,
+                        progress = { animatedProgress },
+                        modifier = Modifier.size(60.dp),
+                        color = if (isCompleted) goldAccent else MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        strokeWidth = 4.dp
+                        strokeWidth = 4.5.dp
                     )
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .background(
-                                if (isCompleted) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.primaryContainer
+                                if (isCompleted) goldAccent
+                                else MaterialTheme.colorScheme.primary
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -224,7 +256,7 @@ fun ZikrCardItem(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "اكتمل",
-                                tint = MaterialTheme.colorScheme.onPrimary,
+                                tint = Color.White,
                                 modifier = Modifier.size(24.dp)
                             )
                         } else {
@@ -232,14 +264,14 @@ fun ZikrCardItem(
                                 text = "${zikr.repeatCount - currentCount}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     }
                 }
             }
 
-            // القسم القابل للطي (الفضل والمصدر)
+            // القسم القابل للطي
             AnimatedVisibility(
                 visible = isExpanded,
                 enter = expandVertically() + fadeIn(),
@@ -258,10 +290,10 @@ fun ZikrCardItem(
 
                     if (!zikr.virtueText.isNullOrBlank()) {
                         Text(
-                            text = "فضل الذكر:",
+                            text = "فضل هذا الذكر:",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = goldAccent
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(

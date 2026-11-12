@@ -21,6 +21,7 @@ window = "1.3.0"
 splash = "1.0.1"
 play-services-location = "21.3.0"
 json = "20231013"
+adhan = "1.2.1"
 
 [libraries]
 # AndroidX Core
@@ -79,6 +80,9 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 
 # Location
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "play-services-location" }
+
+# Adhan (Offline Prayer Times)
+adhan = { group = "com.batoulapps.adhan", name = "adhan", version.ref = "adhan" }
 
 # JSON
 org-json = { group = "org.json", name = "json", version.ref = "json" }

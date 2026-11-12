@@ -1,9 +1,7 @@
 package com.sakinah.app.feature.home.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,12 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sakinah.app.core.ui.theme.sakinahColors
 import com.sakinah.app.feature.home.SmartContextType
 
 @Composable
@@ -41,15 +37,19 @@ fun SmartHeroCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val goldAccent = Color(0xFFC8A951)
+    val emeraldPrimary = Color(0xFF0F3D2E)
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
+            .border(1.dp, goldAccent.copy(alpha = 0.35f), MaterialTheme.shapes.large)
             .clickable { onClick() },
         shape = MaterialTheme.shapes.large,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.sakinahColors.heroCardBackground
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Box(
@@ -68,14 +68,15 @@ fun SmartHeroCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = contextType.iconEmoji,
-                            fontSize = 28.sp
+                            fontSize = 30.sp
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "الورد المناسب للوقت الحالي",
+                                text = "الورد الموصى به الآن",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = goldAccent,
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = contextType.title,
@@ -86,18 +87,18 @@ fun SmartHeroCard(
                         }
                     }
 
-                    // أيقونة البدء السريع
+                    // زر البدء السريع الدائري الفاخر
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(42.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
+                            .background(goldAccent),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = "ابدأ الورد",
-                            tint = MaterialTheme.colorScheme.onPrimary,
+                            tint = Color.White,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -112,7 +113,7 @@ fun SmartHeroCard(
                     maxLines = 2
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -122,8 +123,8 @@ fun SmartHeroCard(
                     Text(
                         text = "اضغط للمتابعة الآن ←",
                         style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.secondary
+                        fontWeight = FontWeight.Bold,
+                        color = goldAccent
                     )
                 }
             }

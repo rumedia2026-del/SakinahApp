@@ -1,8 +1,7 @@
 package com.sakinah.app.feature.azkar
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,7 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FormatSize
@@ -29,6 +29,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -38,20 +39,27 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.sakinah.app.core.navigation.Screen
+import com.sakinah.app.core.utils.audio.SakinahAudioSpeaker
 import com.sakinah.app.core.utils.rememberHapticFeedback
 import com.sakinah.app.feature.azkar.components.ZikrCardItem
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,53 +69,92 @@ fun AzkarListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val haptic = rememberHapticFeedback()
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // تهيئة القارئ الصوتي
+    val speaker = remember { SakinahAudioSpeaker(context) }
+    DisposableEffect(Unit) {
+        onDispose { speaker.shutdown() }
+    }
 
     var showFontSlider by remember { mutableStateOf(false) }
 
     val showTashkeel = uiState.userPreferences?.showTashkeel ?: true
     val fontSizeMultiplier = uiState.userPreferences?.fontSizeMultiplier ?: 1.0f
 
+    // حساب نسبة إنجاز الورد كاملاً
+    val totalAzkar = uiState.azkarList.size
+    val completedAzkarCount = uiState.azkarList.count { zikr ->
+        (uiState.progressMap[zikr.id] ?: 0) >= zikr.repeatCount
+    }
+    val targetTotalProgress = if (totalAzkar > 0) completedAzkarCount.toFloat() / totalAzkar.toFloat() else 0f
+    val animatedTotalProgress by animateFloatAsState(targetValue = targetTotalProgress, label = "TotalWirdProgress")
+
+    val goldAccent = Color(0xFFC8A951)
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = uiState.category?.titleAr ?: "الأذكار",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "رجوع"
-                        )
-                    }
-                },
-                actions = {
-                    // زر الانتقال المباشر لوضع التركيز الغامر (Zen Mode)
-                    IconButton(
-                        onClick = {
-                            uiState.category?.let {
-                                navController.navigate(Screen.ZenMode.createRoute(it.id))
+            Column {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = uiState.category?.titleAr ?: "الأذكار",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (totalAzkar > 0) {
+                                Text(
+                                    text = "إنجاز الورد: $completedAzkarCount من $totalAzkar",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = goldAccent
+                                )
                             }
                         }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SelfImprovement,
-                            contentDescription = "وضع التركيز",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "رجوع"
+                            )
+                        }
+                    },
+                    actions = {
+                        // زر الانتقال المباشر لوضع التركيز الغامر (Zen Mode)
+                        IconButton(
+                            onClick = {
+                                uiState.category?.let {
+                                    navController.navigate(Screen.ZenMode.createRoute(it.id))
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SelfImprovement,
+                                contentDescription = "وضع التركيز",
+                                tint = goldAccent
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    )
                 )
-            )
+
+                // شريط التقدم العلوي للورد الكامل
+                if (totalAzkar > 0) {
+                    LinearProgressIndicator(
+                        progress = { animatedTotalProgress },
+                        modifier = Modifier.fillMaxWidth().height(3.dp),
+                        color = goldAccent,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                }
+            }
         },
         bottomBar = {
-            // شريط تحكم سفلي سهل الوصول بإبهام اليد (Thumb-friendly Toolbar)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 tonalElevation = 6.dp,
@@ -136,8 +183,8 @@ fun AzkarListScreen(
                                 valueRange = 0.8f..1.4f,
                                 modifier = Modifier.weight(1f),
                                 colors = SliderDefaults.colors(
-                                    thumbColor = MaterialTheme.colorScheme.primary,
-                                    activeTrackColor = MaterialTheme.colorScheme.primary
+                                    thumbColor = goldAccent,
+                                    activeTrackColor = goldAccent
                                 )
                             )
                         }
@@ -148,7 +195,6 @@ fun AzkarListScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // مفتاح تبديل التشكيل
                         FilterChip(
                             selected = showTashkeel,
                             onClick = { viewModel.toggleTashkeel(!showTashkeel) },
@@ -166,12 +212,11 @@ fun AzkarListScreen(
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                selectedContainerColor = goldAccent.copy(alpha = 0.2f),
+                                selectedLabelColor = goldAccent
                             )
                         )
 
-                        // زر تبديل إظهار شريط تعديل حجم الخط
                         FilterChip(
                             selected = showFontSlider,
                             onClick = { showFontSlider = !showFontSlider },
@@ -206,16 +251,17 @@ fun AzkarListScreen(
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(
+                itemsIndexed(
                     items = uiState.azkarList,
-                    key = { it.id }
-                ) { zikr ->
+                    key = { _, zikr -> zikr.id }
+                ) { index, zikr ->
                     val currentCount = uiState.progressMap[zikr.id] ?: 0
                     ZikrCardItem(
                         zikr = zikr,
@@ -224,16 +270,27 @@ fun AzkarListScreen(
                         fontSizeMultiplier = fontSizeMultiplier,
                         haptic = haptic,
                         onTap = {
-                            viewModel.onZikrTapped(zikr.id, zikr.repeatCount)
+                            val completed = viewModel.onZikrTapped(zikr.id, zikr.repeatCount)
+                            // الانتقال التلقائي السلس للذكر التالي فور اكتمال التكرارات
+                            if (completed && index < uiState.azkarList.lastIndex) {
+                                coroutineScope.launch {
+                                    delay(400) // وقفة لطيفة للاستشعار بالإتمام
+                                    listState.animateScrollToItem(index + 1)
+                                }
+                            }
                         },
                         onToggleFavorite = {
                             viewModel.toggleFavorite(zikr)
+                        },
+                        onSpeak = {
+                            val speechText = if (showTashkeel) zikr.textWithTashkeel else zikr.textPlain
+                            speaker.speak(speechText)
                         }
                     )
                 }
 
-                item {
-                    Spacer(modifier = Modifier.height(30.dp))
+                item(key = "bottom_spacer") {
+                    Spacer(modifier = Modifier.height(40.dp))
                 }
             }
         }

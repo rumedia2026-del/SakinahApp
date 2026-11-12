@@ -128,8 +128,9 @@ dependencies {
     // Coil
     implementation(libs.coil.compose)
 
-    // Location
+    // Location & Prayer Times
     implementation(libs.play.services.location)
+    implementation(libs.adhan)
 
     // JSON
     implementation(libs.org.json)

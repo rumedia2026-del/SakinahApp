@@ -25,7 +25,7 @@ import java.io.InputStreamReader
         ZikrEntity::class,
         DailyProgressEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class SakinahDatabase : RoomDatabase() {
@@ -47,6 +47,7 @@ abstract class SakinahDatabase : RoomDatabase() {
                     SakinahDatabase::class.java,
                     DATABASE_NAME
                 )
+                    .fallbackToDestructiveMigration()
                     .addCallback(SakinahDatabaseCallback(context.applicationContext, scope))
                     .build()
                 INSTANCE = instance

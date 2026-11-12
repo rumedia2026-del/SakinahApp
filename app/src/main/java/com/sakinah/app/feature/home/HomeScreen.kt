@@ -33,6 +33,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -45,6 +46,7 @@ import com.sakinah.app.core.ui.theme.SakinahTheme
 import com.sakinah.app.core.ui.theme.SakinahThemeMode
 import com.sakinah.app.data.local.db.entities.CategoryEntity
 import com.sakinah.app.feature.home.components.CategoryCard
+import com.sakinah.app.feature.home.components.PrayerTimesCard
 import com.sakinah.app.feature.home.components.SmartHeroCard
 
 @Composable
@@ -81,16 +83,18 @@ fun HomeContent(
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val goldAccent = Color(0xFFC8A951)
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "سكينة",
+                            text = "سـَـكـِـيـنـَـة",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = goldAccent
                         )
                     }
                 },
@@ -128,7 +132,12 @@ fun HomeContent(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // 1. البطاقة الذكية المعتمدة على السياق والوقت
+                // 1. بطاقة مواقيت الصلاة والعد التنازلي التفاعلي
+                item(key = "prayer_times_card") {
+                    PrayerTimesCard()
+                }
+
+                // 2. البطاقة الذكية المعتمدة على السياق والوقت
                 item(key = "smart_hero_card") {
                     SmartHeroCard(
                         contextType = uiState.smartContext,
@@ -136,7 +145,7 @@ fun HomeContent(
                     )
                 }
 
-                // 2. شريط البحث السريع عن الأذكار والأدعية
+                // 3. شريط البحث السريع عن الأذكار والأدعية
                 item(key = "search_bar") {
                     OutlinedTextField(
                         value = uiState.searchQuery,
@@ -169,7 +178,7 @@ fun HomeContent(
                         singleLine = true,
                         shape = MaterialTheme.shapes.medium,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedBorderColor = goldAccent,
                             unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                             focusedContainerColor = MaterialTheme.colorScheme.surface,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surface
@@ -177,10 +186,10 @@ fun HomeContent(
                     )
                 }
 
-                // 3. عنوان تصنيفات الأذكار
+                // 4. عنوان تصنيفات الأذكار
                 item(key = "categories_header") {
                     Text(
-                        text = "أقسام الأذكار والأدعية",
+                        text = "مكتبة حصن المسلم والأدعية",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground,
@@ -188,7 +197,7 @@ fun HomeContent(
                     )
                 }
 
-                // 4. قائمة الأقسام
+                // 5. قائمة الأقسام
                 items(
                     items = uiState.filteredCategories,
                     key = { it.id }
@@ -207,10 +216,6 @@ fun HomeContent(
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  COMPOSE PREVIEWS — الوضع النهاري والوضع الليلي
-// ═══════════════════════════════════════════════════════════════════
-
 private val sampleCategories = listOf(
     CategoryEntity(1, "أذكار الصباح", "wb_sunny", "04:30", "11:00", 1),
     CategoryEntity(2, "أذكار المساء", "nights_stay", "15:30", "20:00", 2),
@@ -225,26 +230,6 @@ private fun HomeScreenLightPreview() {
         HomeContent(
             uiState = HomeUiState(
                 smartContext = SmartContextType.MORNING,
-                categories = sampleCategories,
-                filteredCategories = sampleCategories,
-                searchQuery = "",
-                isLoading = false
-            ),
-            onSearchQueryChanged = {},
-            onHeroCardClick = {},
-            onCategoryClick = {},
-            onSettingsClick = {}
-        )
-    }
-}
-
-@Preview(name = "Home Screen - Dark Slate", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
-@Composable
-private fun HomeScreenDarkPreview() {
-    SakinahTheme(themeMode = SakinahThemeMode.SOFT_SLATE_DARK) {
-        HomeContent(
-            uiState = HomeUiState(
-                smartContext = SmartContextType.EVENING,
                 categories = sampleCategories,
                 filteredCategories = sampleCategories,
                 searchQuery = "",
