@@ -16,3 +16,5 @@ lint/intermediates/
 lint/generated/
 lint/outputs/
 lint/tmp/
+build_output/
+*.apk
