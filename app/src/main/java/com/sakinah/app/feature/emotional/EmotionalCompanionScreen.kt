@@ -59,10 +59,10 @@ fun EmotionalCompanionScreen(
 
     val progressMap = remember { mutableStateMapOf<Int, Int>() }
     val context = androidx.compose.ui.platform.LocalContext.current
-    val speaker = remember { com.sakinah.app.core.utils.audio.SakinahAudioSpeaker(context) }
+    val sheikhPlayer = remember { com.sakinah.app.core.utils.audio.SheikhAudioPlayer(context) }
 
     androidx.compose.runtime.DisposableEffect(Unit) {
-        onDispose { speaker.shutdown() }
+        onDispose { sheikhPlayer.release() }
     }
 
     EmotionalCompanionContent(
@@ -71,7 +71,9 @@ fun EmotionalCompanionScreen(
         azkarList = azkarList,
         progressMap = progressMap,
         haptic = haptic,
-        onSpeak = { text -> speaker.speak(text) },
+        onSpeak = { _ ->
+            sheikhPlayer.playUrl("https://everyayah.com/data/Alafasy_128kbps/002255.mp3")
+        },
         onSelectEmotion = { emotion ->
             viewModel.selectEmotion(emotion)
             haptic.tick()
