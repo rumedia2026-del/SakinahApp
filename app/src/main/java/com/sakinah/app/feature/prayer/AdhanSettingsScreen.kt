@@ -4,7 +4,6 @@ import android.content.Context
 import android.media.AudioManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,16 +19,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.HearingDisabled
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -62,26 +59,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sakinah.app.core.utils.audio.SheikhAudioPlayer
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.sakinah.app.core.utils.rememberHapticFeedback
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdhanSettingsScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    viewModel: AdhanSettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val haptic = rememberHapticFeedback()
     val prefs = remember { context.getSharedPreferences("sakinah_prayer_prefs", Context.MODE_PRIVATE) }
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
 
-    val sheikhPlayer = remember { SheikhAudioPlayer(context) }
-    val isAudioPlaying by sheikhPlayer.isPlaying.collectAsState()
-    var previewingMuezzinId by remember { mutableStateOf<String?>(null) }
+    val playingMuezzinId by viewModel.playingMuezzinId.collectAsState()
+    val isMusicVolumeMuted by viewModel.isMusicVolumeMuted.collectAsState()
 
     DisposableEffect(Unit) {
         onDispose {
-            sheikhPlayer.release()
+            viewModel.stopPreview()
         }
     }
 
@@ -177,6 +174,34 @@ fun AdhanSettingsScreen(
         ) {
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
+            // تنبيه إذا كان صوت وسائط الهاتف مكتوماً
+            if (isMusicVolumeMuted) {
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFFFF3CD),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFEEBA)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.VolumeMute, contentDescription = null, tint = Color(0xFF856404))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "تم رفع صوت وسائط الهاتف تلقائياً لتتمكن من سماع الأذان بوضوح.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF856404),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+
             // 1. المفتاح الرئيسي للتنبيهات
             item {
                 Card(
@@ -230,7 +255,7 @@ fun AdhanSettingsScreen(
 
             items(MuadhinCatalog.muadhins) { muadhin ->
                 val isSelected = selectedMuezzinId == muadhin.id
-                val isCurrentPlaying = isAudioPlaying && previewingMuezzinId == muadhin.id
+                val isCurrentPlaying = playingMuezzinId == muadhin.id
 
                 Card(
                     modifier = Modifier
@@ -291,18 +316,10 @@ fun AdhanSettingsScreen(
                             }
                         }
 
-                        // زر الاستماع / المعاينة
+                        // زر الاستماع / المعاينة عبر MediaPlayer المباشر في ViewModel
                         IconButton(
                             onClick = {
-                                if (isCurrentPlaying) {
-                                    sheikhPlayer.stop()
-                                    previewingMuezzinId = null
-                                } else {
-                                    previewingMuezzinId = muadhin.id
-                                    sheikhPlayer.playRawResource(muadhin.rawResId) {
-                                        previewingMuezzinId = null
-                                    }
-                                }
+                                viewModel.playPreview(muadhin)
                                 haptic.tick()
                             }
                         ) {
