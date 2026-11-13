@@ -17,6 +17,9 @@ interface ProgressDao {
     @Query("SELECT * FROM daily_progress ORDER BY date DESC LIMIT :limit")
     fun getRecentProgress(limit: Int): Flow<List<DailyProgressEntity>>
 
+    @Query("SELECT * FROM daily_progress ORDER BY date ASC")
+    fun getAllProgress(): Flow<List<DailyProgressEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateProgress(progress: DailyProgressEntity)
 

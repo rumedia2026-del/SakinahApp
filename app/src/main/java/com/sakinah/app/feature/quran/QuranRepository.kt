@@ -24,6 +24,7 @@ class QuranRepository @Inject constructor(
     private var pageMap: Map<Int, List<AyahItem>>? = null
     private var uthmaniJsonRoot: JSONObject? = null
     private var tafsirJsonRoot: JSONObject? = null
+    private var jalalaynJsonRoot: JSONObject? = null
 
     fun getJuzList(): List<JuzItem> = listOf(
         JuzItem(1, "الجزء الأول", "سورة الفاتحة", 1),
@@ -90,23 +91,28 @@ class QuranRepository @Inject constructor(
     suspend fun getAyahsForSurah(surahNumber: Int): List<AyahItem> = withContext(Dispatchers.IO) {
         ensureUthmaniLoaded()
         ensureTafsirLoaded()
+        ensureJalalaynLoaded()
 
         val uthmaniSurahs = uthmaniJsonRoot?.getJSONObject("data")?.getJSONArray("surahs")
         val tafsirSurahs = tafsirJsonRoot?.getJSONObject("data")?.getJSONArray("surahs")
+        val jalalaynSurahs = jalalaynJsonRoot?.getJSONObject("data")?.getJSONArray("surahs")
 
         val result = mutableListOf<AyahItem>()
         if (uthmaniSurahs != null && surahNumber in 1..114) {
             val surahObj = uthmaniSurahs.getJSONObject(surahNumber - 1)
             val tafsirSurahObj = tafsirSurahs?.optJSONObject(surahNumber - 1)
+            val jalalaynSurahObj = jalalaynSurahs?.optJSONObject(surahNumber - 1)
 
             val ayahs = surahObj.getJSONArray("ayahs")
             val tafsirAyahs = tafsirSurahObj?.optJSONArray("ayahs")
+            val jalalaynAyahs = jalalaynSurahObj?.optJSONArray("ayahs")
 
             val surahName = surahObj.getString("name")
 
             for (i in 0 until ayahs.length()) {
                 val a = ayahs.getJSONObject(i)
                 val tafsirText = tafsirAyahs?.optJSONObject(i)?.optString("text", "التفسير الميسر غير متاح")
+                val jalalaynText = jalalaynAyahs?.optJSONObject(i)?.optString("text", null)
 
                 result.add(
                     AyahItem(
@@ -117,7 +123,8 @@ class QuranRepository @Inject constructor(
                         surahName = surahName,
                         juz = a.getInt("juz"),
                         page = a.getInt("page"),
-                        tafsir = tafsirText
+                        tafsir = tafsirText,
+                        jalalaynTafsir = jalalaynText
                     )
                 )
             }
@@ -158,6 +165,19 @@ class QuranRepository @Inject constructor(
             val reader = BufferedReader(InputStreamReader(stream, "UTF-8"))
             val content = reader.use { it.readText() }
             tafsirJsonRoot = JSONObject(content)
+        }
+    }
+
+    private fun ensureJalalaynLoaded() {
+        if (jalalaynJsonRoot == null) {
+            try {
+                val stream = context.resources.openRawResource(R.raw.quran_jalalayn)
+                val reader = BufferedReader(InputStreamReader(stream, "UTF-8"))
+                val content = reader.use { it.readText() }
+                jalalaynJsonRoot = JSONObject(content)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 }

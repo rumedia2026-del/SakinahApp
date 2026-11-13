@@ -127,4 +127,48 @@ class AppIntegrityTest {
 
         assertTrue("Ruqyah category (id: 12) should have at least 30 azkar, found $ruqyahCount", ruqyahCount >= 30)
     }
+
+    @Test
+    fun testQuranUthmaniNoDuplicateBasmalah() {
+        val possiblePaths = listOf(
+            File("app/src/main/res/raw/quran_uthmani.json"),
+            File("src/main/res/raw/quran_uthmani.json"),
+            File("../app/src/main/res/raw/quran_uthmani.json")
+        )
+        val file = possiblePaths.firstOrNull { it.exists() }
+            ?: throw IllegalStateException("quran_uthmani.json not found in expected paths")
+        val content = file.readText(Charsets.UTF_8)
+        val root = JSONObject(content)
+        val surahs = root.getJSONObject("data").getJSONArray("surahs")
+
+        for (i in 0 until surahs.length()) {
+            val surah = surahs.getJSONObject(i)
+            val surahNumber = surah.getInt("number")
+            val ayahs = surah.getJSONArray("ayahs")
+            val firstAyah = ayahs.getJSONObject(0)
+            val text = firstAyah.getString("text")
+
+            if (surahNumber != 1 && surahNumber != 9) {
+                assertFalse(
+                    "Surah $surahNumber Ayah 1 should not start with duplicate Basmalah",
+                    text.startsWith("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ")
+                )
+            }
+        }
+    }
+
+    @Test
+    fun testQuranJalalaynExistsAndValid() {
+        val possiblePaths = listOf(
+            File("app/src/main/res/raw/quran_jalalayn.json"),
+            File("src/main/res/raw/quran_jalalayn.json"),
+            File("../app/src/main/res/raw/quran_jalalayn.json")
+        )
+        val file = possiblePaths.firstOrNull { it.exists() }
+            ?: throw IllegalStateException("quran_jalalayn.json not found in expected paths")
+        val content = file.readText(Charsets.UTF_8)
+        val root = JSONObject(content)
+        val surahs = root.getJSONObject("data").getJSONArray("surahs")
+        assertEquals(114, surahs.length())
+    }
 }

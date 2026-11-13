@@ -7,10 +7,12 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sakinah.app.R
 import com.sakinah.app.data.local.db.dao.CategoryDao
+import com.sakinah.app.data.local.db.dao.MunajatDao
 import com.sakinah.app.data.local.db.dao.ProgressDao
 import com.sakinah.app.data.local.db.dao.ZikrDao
 import com.sakinah.app.data.local.db.entities.CategoryEntity
 import com.sakinah.app.data.local.db.entities.DailyProgressEntity
+import com.sakinah.app.data.local.db.entities.MunajatEntity
 import com.sakinah.app.data.local.db.entities.ZikrEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,9 +25,10 @@ import java.io.InputStreamReader
     entities = [
         CategoryEntity::class,
         ZikrEntity::class,
-        DailyProgressEntity::class
+        DailyProgressEntity::class,
+        MunajatEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class SakinahDatabase : RoomDatabase() {
@@ -33,6 +36,7 @@ abstract class SakinahDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun zikrDao(): ZikrDao
     abstract fun progressDao(): ProgressDao
+    abstract fun munajatDao(): MunajatDao
 
     companion object {
         const val DATABASE_NAME = "sakinah_db"

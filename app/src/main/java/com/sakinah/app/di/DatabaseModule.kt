@@ -3,6 +3,7 @@ package com.sakinah.app.di
 import android.content.Context
 import com.sakinah.app.data.local.db.SakinahDatabase
 import com.sakinah.app.data.local.db.dao.CategoryDao
+import com.sakinah.app.data.local.db.dao.MunajatDao
 import com.sakinah.app.data.local.db.dao.ProgressDao
 import com.sakinah.app.data.local.db.dao.ZikrDao
 import dagger.Module
@@ -47,5 +48,10 @@ object DatabaseModule {
     @Provides
     fun provideProgressDao(database: SakinahDatabase): ProgressDao {
         return database.progressDao()
+    }
+
+    @Provides
+    fun provideMunajatDao(database: SakinahDatabase): MunajatDao {
+        return database.munajatDao()
     }
 }

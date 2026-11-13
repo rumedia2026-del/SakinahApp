@@ -1,8 +1,14 @@
 package com.sakinah.app.feature.quran.components
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,10 +27,10 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Handyman
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -43,6 +49,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -57,8 +64,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.sakinah.app.core.utils.audio.SheikhAudioPlayer
 import com.sakinah.app.feature.quran.TadabburHelper
+import com.sakinah.app.feature.quran.audio.RecitationRecorder
 import com.sakinah.app.feature.quran.model.AyahItem
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,15 +80,31 @@ fun TadabburAyahBottomSheet(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: وقفات، 1: عمل بالآيات، 2: معاني الكلمات، 3: التفسير والتلاوة
+    var selectedTab by remember { mutableIntStateOf(0) }
 
-    // مشغل صوت الشيخ مشاري العفاسي المعتمد على Media3 ExoPlayer
-    val audioPlayer = remember { SheikhAudioPlayer(context) }
-    var isPlaying by remember { mutableStateOf(false) }
+    // مشغل صوت الشيخ عبر Media3 ExoPlayer
+    val sheikhPlayer = remember { SheikhAudioPlayer(context) }
+    val isSheikhPlaying by sheikhPlayer.isPlaying.collectAsState()
+
+    // مسجل التلاوة الذاتي
+    val recorder = remember { RecitationRecorder(context) }
+    val isRecording by recorder.isRecording.collectAsState()
+    val isPlayingRecording by recorder.isPlayingRecording.collectAsState()
+    val hasRecording by recorder.hasRecording.collectAsState()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            sheikhPlayer.stop()
+            recorder.startRecording(ayah.surahNumber, ayah.numberInSurah)
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
-            audioPlayer.release()
+            sheikhPlayer.release()
+            recorder.release()
         }
     }
 
@@ -90,7 +115,8 @@ fun TadabburAyahBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = {
-            audioPlayer.stop()
+            sheikhPlayer.stop()
+            recorder.release()
             onDismiss()
         },
         sheetState = sheetState,
@@ -151,7 +177,7 @@ fun TadabburAyahBottomSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // ألسنة التبويب الأربعة: وقفات تدبرية، عمل بالآيات، معاني الكلمات، التفسير والتلاوة
+            // التبويبات الأربعة
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.surface,
@@ -179,34 +205,45 @@ fun TadabburAyahBottomSheet(
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
                     text = { Text("التفسير والتلاوة", fontWeight = FontWeight.Bold, fontSize = 12.sp) },
-                    icon = { Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    icon = { Icon(Icons.Default.Mic, contentDescription = null, modifier = Modifier.size(16.dp)) }
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             when (selectedTab) {
                 0 -> {
                     // 1. الوقفات التدبرية
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        tadabbur.reflections.forEachIndexed { idx, ref ->
+                        tadabbur.reflections.forEachIndexed { idx, point ->
                             Card(
                                 shape = MaterialTheme.shapes.medium,
-                                colors = CardDefaults.cardColors(containerColor = emeraldPrimary.copy(alpha = 0.05f)),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(14.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
                                     verticalAlignment = Alignment.Top
                                 ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .background(goldAccent.copy(alpha = 0.2f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "${idx + 1}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = goldAccent
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
                                     Text(
-                                        text = "💎",
-                                        fontSize = 18.sp,
-                                        modifier = Modifier.padding(top = 2.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = ref,
+                                        text = point,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface,
                                         lineHeight = 22.sp
@@ -219,24 +256,35 @@ fun TadabburAyahBottomSheet(
                 1 -> {
                     // 2. العمل بالآيات
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        tadabbur.actionPoints.forEachIndexed { idx, act ->
+                        tadabbur.actionPoints.forEachIndexed { idx, action ->
                             Card(
                                 shape = MaterialTheme.shapes.medium,
-                                colors = CardDefaults.cardColors(containerColor = goldAccent.copy(alpha = 0.08f)),
+                                colors = CardDefaults.cardColors(containerColor = emeraldPrimary.copy(alpha = 0.08f)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(14.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
                                     verticalAlignment = Alignment.Top
                                 ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .background(emeraldPrimary),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "${idx + 1}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
                                     Text(
-                                        text = "🌿",
-                                        fontSize = 18.sp,
-                                        modifier = Modifier.padding(top = 2.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = act,
+                                        text = action,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface,
                                         lineHeight = 22.sp
@@ -281,48 +329,160 @@ fun TadabburAyahBottomSheet(
                     }
                 }
                 3 -> {
-                    // 4. التفسير الميسر والتلاوة الصوتية
-                    Column {
-                        // زر الاستماع لتلاوة الشيخ مشاري العفاسي
+                    // 4. التفسير والتلاوة + مسجل التلاوة الذاتي (سجّل صوتك وقارن)
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        // تلاوة الشيخ مشاري العفاسي
                         Button(
                             onClick = {
-                                if (isPlaying) {
-                                    audioPlayer.pause()
-                                    isPlaying = false
+                                if (isSheikhPlaying) {
+                                    sheikhPlayer.stop()
                                 } else {
-                                    audioPlayer.playAyah(ayah.surahNumber, ayah.numberInSurah)
-                                    isPlaying = true
+                                    recorder.stopPlaying()
+                                    recorder.stopRecording()
+                                    sheikhPlayer.playAyah(ayah.surahNumber, ayah.numberInSurah)
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = emeraldPrimary),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(
-                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                imageVector = if (isSheikhPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
                                 contentDescription = null,
                                 tint = goldAccent
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (isPlaying) "إيقاف التلاوة" else "استمع لتلاوة الشيخ مشاري العفاسي 🎧",
+                                text = if (isSheikhPlaying) "إيقاف تلاوة الشيخ" else "استمع لتلاوة الشيخ مشاري العفاسي 🎧",
                                 color = Color.White
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        // بطاقة "سجّل صوتك وقارن مع تلاوة الشيخ"
+                        Card(
+                            shape = MaterialTheme.shapes.medium,
+                            colors = CardDefaults.cardColors(containerColor = goldAccent.copy(alpha = 0.1f)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, goldAccent.copy(alpha = 0.35f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp)
+                            ) {
+                                Text(
+                                    text = "🎙️ سجّل صوتك وقارن مع الشيخ لتصحيح النطق:",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = emeraldPrimary
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
 
-                        Text(
-                            text = "التفسير الميسر:",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = emeraldPrimary
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = tadabbur.tafsir,
-                            style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 26.sp),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            if (isRecording) {
+                                                recorder.stopRecording()
+                                            } else {
+                                                val hasPermission = ContextCompat.checkSelfPermission(
+                                                    context,
+                                                    Manifest.permission.RECORD_AUDIO
+                                                ) == PackageManager.PERMISSION_GRANTED
+
+                                                if (hasPermission) {
+                                                    sheikhPlayer.stop()
+                                                    recorder.startRecording(ayah.surahNumber, ayah.numberInSurah)
+                                                } else {
+                                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                                }
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (isRecording) Color(0xFFC62828) else emeraldPrimary
+                                        ),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
+                                            contentDescription = null,
+                                            tint = Color.White
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(text = if (isRecording) "إيقاف التسجيل" else "سجّل الآن")
+                                    }
+
+                                    if (hasRecording) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                if (isPlayingRecording) {
+                                                    recorder.stopPlaying()
+                                                } else {
+                                                    sheikhPlayer.stop()
+                                                    recorder.playRecording()
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isPlayingRecording) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                                contentDescription = null,
+                                                tint = emeraldPrimary
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(text = if (isPlayingRecording) "إيقاف" else "استمع لتسجيلك")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // التفسير الميسر
+                        Card(
+                            shape = MaterialTheme.shapes.medium,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text(
+                                    text = "التفسير الميسر:",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = emeraldPrimary
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = tadabbur.tafsirMuyassar,
+                                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+
+                        // تفسير الجلالين
+                        if (tadabbur.tafsirJalalayn.isNotEmpty()) {
+                            Card(
+                                shape = MaterialTheme.shapes.medium,
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Text(
+                                        text = "تفسير الجلالين:",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = goldAccent
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = tadabbur.tafsirJalalayn,
+                                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -2,9 +2,11 @@ package com.sakinah.app.feature.quran
 
 import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FormatSize
@@ -36,9 +39,12 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -57,6 +63,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -66,6 +73,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -153,13 +161,77 @@ fun QuranScreen(
     val emeraldPrimary = Color(0xFF0F3D2E)
 
     var showFontSlider by remember { mutableStateOf(false) }
+    var isTajweedEnabled by remember { mutableStateOf(false) }
+    var selectedThemeIndex by remember { mutableIntStateOf(0) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var isHifzModeActive by remember { mutableStateOf(false) }
+    var unmaskedWordKeys by remember { mutableStateOf(setOf<String>()) }
+    var highlightedAyahNumber by remember { mutableStateOf<Int?>(null) }
+
+    val currentTheme = QuranThemeManager.getTheme(selectedThemeIndex)
+
+    // نافذة اختيار ثيمات المصحف الـ 6
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            title = { Text("اختر ثيم المصحف الشريف", fontWeight = FontWeight.Bold, color = emeraldPrimary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    QuranThemeManager.themes.forEach { theme ->
+                        val isSelected = selectedThemeIndex == theme.id
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            color = theme.backgroundColor,
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) goldAccent else theme.borderColor.copy(alpha = 0.4f)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedThemeIndex = theme.id
+                                    showThemeDialog = false
+                                    haptic.tick()
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = theme.nameAr,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = theme.textColor
+                                )
+                                if (isSelected) {
+                                    Text("✓ المختار", color = goldAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showThemeDialog = false }) {
+                    Text("إغلاق", color = emeraldPrimary)
+                }
+            }
+        )
+    }
 
     // شيت التدبر والعمل لآية مختارة
     if (uiState.selectedAyahForTafsir != null) {
         TadabburAyahBottomSheet(
             ayah = uiState.selectedAyahForTafsir!!,
             sheetState = sheetState,
-            onDismiss = viewModel::closeTafsir,
+            onDismiss = {
+                highlightedAyahNumber = null
+                viewModel::closeTafsir.invoke()
+            },
             onBookmark = {
                 viewModel.saveBookmark(uiState.selectedAyahForTafsir!!)
                 haptic.completion()
@@ -176,9 +248,9 @@ fun QuranScreen(
             pageCount = { 604 }
         )
 
-        val pageBg = if (uiState.isNightMode) Color(0xFF121619) else Color(0xFFFDFBF7)
-        val pageTextColor = if (uiState.isNightMode) Color(0xFFE8EDF2) else Color(0xFF1B2E24)
-        val pageBorderColor = if (uiState.isNightMode) goldAccent.copy(alpha = 0.35f) else goldAccent.copy(alpha = 0.5f)
+        val pageBg = if (uiState.isNightMode) Color(0xFF121619) else currentTheme.backgroundColor
+        val pageTextColor = if (uiState.isNightMode) Color(0xFFE8EDF2) else currentTheme.textColor
+        val pageBorderColor = if (uiState.isNightMode) goldAccent.copy(alpha = 0.35f) else currentTheme.borderColor.copy(alpha = 0.5f)
 
         Scaffold(
             topBar = {
@@ -210,6 +282,39 @@ fun QuranScreen(
                             }
                         },
                         actions = {
+                            // تلوين أحكام التجويد
+                            IconButton(onClick = {
+                                isTajweedEnabled = !isTajweedEnabled
+                                haptic.tick()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Palette,
+                                    contentDescription = "التجويد الملون",
+                                    tint = if (isTajweedEnabled) goldAccent else goldAccent.copy(alpha = 0.5f)
+                                )
+                            }
+
+                            // مبدل الثيمات الـ 6
+                            IconButton(onClick = { showThemeDialog = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.ColorLens,
+                                    contentDescription = "ثيمات المصحف",
+                                    tint = goldAccent
+                                )
+                            }
+
+                            // وضع المحفظ الذكي (Word Masking)
+                            IconButton(onClick = {
+                                isHifzModeActive = !isHifzModeActive
+                                haptic.tick()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.School,
+                                    contentDescription = "المحفظ الذكي",
+                                    tint = if (isHifzModeActive) goldAccent else goldAccent.copy(alpha = 0.5f)
+                                )
+                            }
+
                             // وضع ملء الشاشة الغامر
                             IconButton(onClick = {
                                 isFullScreen = !isFullScreen
@@ -405,26 +510,80 @@ fun QuranScreen(
                                             }
                                         }
 
-                                        // نص الآية
+                                        // نص الآية الكريمة بتنسيق مضبوط وتلوين التجويد والضغط المطول للتدبر
+                                        val isHighlighted = (highlightedAyahNumber == ayah.number)
+                                        val amberAyahNum = Color(0xFFB8860B)
+
+                                        val formattedAyahText = remember(ayah.text, isTajweedEnabled, pageTextColor, isHifzModeActive, unmaskedWordKeys) {
+                                            if (isHifzModeActive) {
+                                                // وضع المحفظ الذكي: تمويه الكلمات لاختبار الحفظ
+                                                val words = ayah.text.split(" ")
+                                                val masked = words.mapIndexed { idx, w ->
+                                                    val key = "${ayah.number}_$idx"
+                                                    if (unmaskedWordKeys.contains(key)) w else "████"
+                                                }.joinToString(" ")
+                                                androidx.compose.ui.text.buildAnnotatedString {
+                                                    append(masked)
+                                                    append(" ")
+                                                    val startNum = length
+                                                    append("﴿${toArabicDigits(ayah.numberInSurah)}﴾")
+                                                    addStyle(
+                                                        androidx.compose.ui.text.SpanStyle(color = amberAyahNum, fontWeight = FontWeight.Bold),
+                                                        startNum,
+                                                        length
+                                                    )
+                                                }
+                                            } else {
+                                                val annotated = TajweedAnnotator.annotate(ayah.text, isTajweedEnabled, pageTextColor)
+                                                androidx.compose.ui.text.buildAnnotatedString {
+                                                    append(annotated)
+                                                    append(" ")
+                                                    val startNum = length
+                                                    append("﴿${toArabicDigits(ayah.numberInSurah)}﴾")
+                                                    addStyle(
+                                                        androidx.compose.ui.text.SpanStyle(color = amberAyahNum, fontWeight = FontWeight.Bold),
+                                                        startNum,
+                                                        length
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        @OptIn(ExperimentalFoundationApi::class)
                                         Surface(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clip(MaterialTheme.shapes.small)
-                                                .clickable {
-                                                    viewModel.showAyahTafsir(ayah)
-                                                    haptic.tick()
-                                                }
+                                                .combinedClickable(
+                                                    onClick = {
+                                                        if (isHifzModeActive) {
+                                                            // كشف كلمات الآية عند النقر
+                                                            val words = ayah.text.split(" ")
+                                                            val newKeys = unmaskedWordKeys.toMutableSet()
+                                                            words.indices.forEach { idx -> newKeys.add("${ayah.number}_$idx") }
+                                                            unmaskedWordKeys = newKeys
+                                                            haptic.tick()
+                                                        } else {
+                                                            isFullScreen = !isFullScreen
+                                                            haptic.tick()
+                                                        }
+                                                    },
+                                                    onLongClick = {
+                                                        highlightedAyahNumber = ayah.number
+                                                        viewModel.showAyahTafsir(ayah)
+                                                        haptic.completion()
+                                                    }
+                                                )
                                                 .padding(vertical = 3.dp),
-                                            color = Color.Transparent
+                                            color = if (isHighlighted) goldAccent.copy(alpha = 0.2f) else Color.Transparent
                                         ) {
                                             Text(
-                                                text = "${ayah.text} ﴿${toArabicDigits(ayah.numberInSurah)}﴾",
+                                                text = formattedAyahText,
                                                 style = MaterialTheme.typography.bodyLarge.copy(
                                                     fontSize = (22 * uiState.fontSizeMultiplier).sp,
                                                     lineHeight = (44 * uiState.fontSizeMultiplier).sp
                                                 ),
-                                                color = pageTextColor,
-                                                textAlign = TextAlign.Center,
+                                                textAlign = TextAlign.Justify,
                                                 modifier = Modifier.fillMaxWidth()
                                             )
                                         }
@@ -452,7 +611,7 @@ fun QuranScreen(
                     }
                 }
 
-                // زر عائم شبه شفاف في الزاوية العلوية للخروج من ملء الشاشة بأي لحظة
+                // زر عائم شبه شفاف في الأسفل للخروج من ملء الشاشة بدون أي تداخل مع ترويسة الجزء
                 if (isFullScreen) {
                     IconButton(
                         onClick = {
@@ -460,17 +619,17 @@ fun QuranScreen(
                             haptic.tick()
                         },
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(12.dp)
-                            .size(38.dp)
+                            .align(Alignment.BottomEnd)
+                            .padding(bottom = 24.dp, end = 20.dp)
+                            .size(42.dp)
                             .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.45f))
+                            .background(Color.Black.copy(alpha = 0.55f))
                     ) {
                         Icon(
                             imageVector = Icons.Default.FullscreenExit,
                             contentDescription = "الخروج من ملء الشاشة",
                             tint = goldAccent,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }

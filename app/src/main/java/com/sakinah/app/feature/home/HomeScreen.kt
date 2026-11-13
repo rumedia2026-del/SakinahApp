@@ -57,6 +57,8 @@ import com.sakinah.app.feature.home.components.DailyWorshipRingsCard
 import com.sakinah.app.feature.home.components.NamesOfAllahCard
 import com.sakinah.app.feature.home.components.PrayerTimesCard
 import com.sakinah.app.feature.home.components.SmartHeroCard
+import com.sakinah.app.feature.home.components.AdhanIqamaWindowCard
+import com.sakinah.app.feature.home.components.DailySunnahCard
 
 @Composable
 fun HomeScreen(
@@ -164,6 +166,19 @@ fun HomeContent(
                 // 1. بطاقة مواقيت الصلاة والعد التنازلي التفاعلي
                 item(key = "prayer_times_card") {
                     PrayerTimesCard(onClick = onPrayerTimesClick)
+                }
+
+                // نافذة ما بين الأذان والإقامة الذكية
+                item(key = "adhan_iqama_window") {
+                    AdhanIqamaWindowCard(
+                        nextPrayerName = "الصلاة القادمة",
+                        countdownText = "وقت إجابة الدعاء"
+                    )
+                }
+
+                // كرت سُنة مهجورة كل يوم
+                item(key = "daily_sunnah_card") {
+                    DailySunnahCard()
                 }
 
                 // 2. حلقات العبادة اليومية الثلاث (أذكار، قرآن، تسبيح)

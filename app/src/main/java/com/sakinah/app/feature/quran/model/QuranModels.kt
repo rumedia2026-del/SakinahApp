@@ -24,7 +24,8 @@ data class AyahItem(
     val surahName: String,
     val juz: Int,
     val page: Int,
-    var tafsir: String? = null
+    var tafsir: String? = null,
+    var jalalaynTafsir: String? = null
 )
 
 data class Bookmark(

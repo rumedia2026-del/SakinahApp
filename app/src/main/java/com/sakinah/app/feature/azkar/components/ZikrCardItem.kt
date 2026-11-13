@@ -201,21 +201,60 @@ fun ZikrCardItem(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // نص الذكر الشريف (تخفيف الشفافية قليلاً عند الاكتمال إلى 0.75f)
-            Text(
-                text = displayText,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = (21 * fontSizeMultiplier).sp,
-                    lineHeight = (38 * fontSizeMultiplier).sp
-                ),
-                color = if (isCompleted) {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-                textAlign = TextAlign.Right,
-                modifier = Modifier.fillMaxWidth()
-            )
+            // تمييز نصوص الأذكار أو فصل السور القصيرة (الإخلاص، الفلق، الناس) في بطاقات فرعية أنيقة
+            val shortSurahs = ZikrTextFormatter.extractShortSurahs(displayText)
+            if (shortSurahs != null) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    shortSurahs.forEach { surah ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium,
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isCompleted) Color(0xFF0F3D2E).copy(alpha = 0.04f) else Color(0xFFF9F7F2)
+                            ),
+                            border = BorderStroke(1.dp, goldAccent.copy(alpha = 0.35f))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = surah.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = goldAccent
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = ZikrTextFormatter.formatZikrText(surah.text, isCompleted),
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontSize = (19 * fontSizeMultiplier).sp,
+                                        lineHeight = (36 * fontSizeMultiplier).sp
+                                    ),
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // نص الذكر الملوّن (الآيات بالأخضر، الأدعية بالبني، الأرقام بالذهبي)
+                Text(
+                    text = ZikrTextFormatter.formatZikrText(displayText, isCompleted),
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = (21 * fontSizeMultiplier).sp,
+                        lineHeight = (38 * fontSizeMultiplier).sp
+                    ),
+                    textAlign = TextAlign.Right,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

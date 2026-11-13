@@ -579,6 +579,21 @@ fun WirdBuilderScreen(
                 }
             }
 
+            // خريطة الالتزام الروحاني السنوية (365 يوماً - Spiritual Heatmap)
+            item(key = "spiritual_heatmap_card") {
+                Card(
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SpiritualHeatmapView(
+                        progressList = viewModel.allProgress.collectAsState().value,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+
             // أذكار الورد الخاص المضافة
             if (favorites.isNotEmpty()) {
                 item(key = "custom_azkar_header") {

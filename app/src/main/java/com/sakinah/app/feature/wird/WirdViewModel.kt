@@ -2,6 +2,8 @@ package com.sakinah.app.feature.wird
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sakinah.app.data.local.db.dao.ProgressDao
+import com.sakinah.app.data.local.db.entities.DailyProgressEntity
 import com.sakinah.app.data.local.db.entities.ZikrEntity
 import com.sakinah.app.data.repository.AzkarRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,10 +15,18 @@ import javax.inject.Inject
 
 @HiltViewModel
 class WirdViewModel @Inject constructor(
-    private val azkarRepository: AzkarRepository
+    private val azkarRepository: AzkarRepository,
+    private val progressDao: ProgressDao
 ) : ViewModel() {
 
     val favoriteAzkar: StateFlow<List<ZikrEntity>> = azkarRepository.getFavoriteAzkar()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val allProgress: StateFlow<List<DailyProgressEntity>> = progressDao.getAllProgress()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
