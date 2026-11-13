@@ -30,7 +30,7 @@ fun MunajatNotebookDialog(
     activeList: List<MunajatEntity>,
     answeredList: List<MunajatEntity>,
     onAddMunajat: (title: String, content: String, emotionTag: String?) -> Unit,
-    onMarkAnswered: (Long, String?) -> Unit,
+    onMarkAnswered: (Long) -> Unit,
     onDelete: (MunajatEntity) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -125,7 +125,7 @@ fun MunajatNotebookDialog(
                             MunajatCardItem(
                                 item = item,
                                 isAnsweredTab = selectedTab == 1,
-                                onMarkAnswered = { onMarkAnswered(item.id, null) },
+                                onMarkAnswered = { onMarkAnswered(item.id) },
                                 onDelete = { onDelete(item) }
                             )
                         }

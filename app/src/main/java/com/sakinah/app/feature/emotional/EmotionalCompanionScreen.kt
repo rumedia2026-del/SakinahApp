@@ -75,8 +75,8 @@ fun EmotionalCompanionScreen(
             onAddMunajat = { title, content, tag ->
                 viewModel.addMunajat(title, content, tag)
             },
-            onMarkAnswered = { id, notes ->
-                viewModel.markMunajatAnswered(id, notes)
+            onMarkAnswered = { id ->
+                viewModel.markMunajatAnswered(id)
             },
             onDelete = { entity ->
                 viewModel.deleteMunajat(entity)

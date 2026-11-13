@@ -28,5 +28,5 @@ interface MunajatDao {
     suspend fun delete(munajat: MunajatEntity)
 
     @Query("UPDATE munajat SET isAnswered = 1, answeredAt = :timestamp WHERE id = :id")
-    suspend fun markAsAnswered(id: Long, timestamp: Long = System.currentTimeMillis(), notes: String? = null)
+    suspend fun markAsAnswered(id: Long, timestamp: Long = System.currentTimeMillis())
 }

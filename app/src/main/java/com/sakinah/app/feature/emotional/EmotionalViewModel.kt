@@ -107,9 +107,9 @@ class EmotionalViewModel @Inject constructor(
         }
     }
 
-    fun markMunajatAnswered(id: Long, notes: String?) {
+    fun markMunajatAnswered(id: Long) {
         viewModelScope.launch {
-            munajatDao.markAsAnswered(id, System.currentTimeMillis(), notes)
+            munajatDao.markAsAnswered(id, System.currentTimeMillis())
         }
     }
 
