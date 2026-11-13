@@ -89,6 +89,8 @@ fun PrayerQiblaScreen(
 ) {
     val context = LocalContext.current
     val haptic = rememberHapticFeedback()
+    val emeraldPrimary = Color(0xFF0F3D2E)
+    val goldAccent = Color(0xFFC8A951)
     val sheikhPlayer = remember { SheikhAudioPlayer(context) }
     var selectedMuezzinId by remember { mutableStateOf("alafasy") }
 
