@@ -20,13 +20,11 @@ class FloatingTasbihService : Service() {
     private var windowManager: WindowManager? = null
     private var floatingView: View? = null
     private var tasbihCount = 0
-    private var haptic: HapticFeedback? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
-        haptic = HapticFeedback(this)
         windowManager = getSystemService(Context.WINDOW_SERVICE) as? WindowManager
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -116,7 +114,13 @@ class FloatingTasbihService : Service() {
                         if (isClick) {
                             tasbihCount++
                             countTv.text = tasbihCount.toString()
-                            haptic?.tasbihTap()
+                            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                vibrator?.vibrate(android.os.VibrationEffect.createOneShot(30, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                            } else {
+                                @Suppress("DEPRECATION")
+                                vibrator?.vibrate(30)
+                            }
                         }
                         return true
                     }

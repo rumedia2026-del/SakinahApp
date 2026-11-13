@@ -64,8 +64,7 @@ fun EmotionalCompanionScreen(
 
     if (showBreathingDialog) {
         BreathingCalmDialog(
-            onDismiss = { viewModel.dismissBreathingDialog() },
-            onCompleted = { viewModel.dismissBreathingDialog() }
+            onDismiss = { viewModel.dismissBreathingDialog() }
         )
     }
 

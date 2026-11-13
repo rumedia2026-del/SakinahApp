@@ -9,6 +9,7 @@ data class MunajatEntity(
     val id: Long = 0,
     val title: String,
     val content: String,
+    val emotionTag: String? = null,
     val isAnswered: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val answeredAt: Long? = null

@@ -19,14 +19,14 @@ interface MunajatDao {
     fun getAnsweredMunajat(): Flow<List<MunajatEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMunajat(munajat: MunajatEntity): Long
+    suspend fun insert(munajat: MunajatEntity): Long
 
     @Update
-    suspend fun updateMunajat(munajat: MunajatEntity)
+    suspend fun update(munajat: MunajatEntity)
 
     @Delete
-    suspend fun deleteMunajat(munajat: MunajatEntity)
+    suspend fun delete(munajat: MunajatEntity)
 
     @Query("UPDATE munajat SET isAnswered = 1, answeredAt = :timestamp WHERE id = :id")
-    suspend fun markAsAnswered(id: Long, timestamp: Long = System.currentTimeMillis())
+    suspend fun markAsAnswered(id: Long, timestamp: Long = System.currentTimeMillis(), notes: String? = null)
 }
