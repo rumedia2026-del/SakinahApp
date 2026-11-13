@@ -55,6 +55,9 @@ sealed class Screen(val route: String) {
 
     /** مواقيت الصلاة والقبلة */
     data object PrayerTimes : Screen("prayer_times")
+
+    /** إعدادات الأذان والمؤذنين المتقدمة */
+    data object AdhanSettings : Screen("adhan_settings")
 }
 
 /** عناصر شريط التنقل السفلي */

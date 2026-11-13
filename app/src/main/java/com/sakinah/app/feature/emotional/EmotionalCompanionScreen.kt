@@ -33,6 +33,10 @@ import com.sakinah.app.core.ui.theme.SakinahThemeMode
 import com.sakinah.app.core.utils.HapticFeedback
 import com.sakinah.app.core.utils.rememberHapticFeedback
 import com.sakinah.app.data.local.db.entities.ZikrEntity
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import java.util.Locale
+import com.sakinah.app.feature.azkar.AzkarAudioManager
 import com.sakinah.app.feature.azkar.components.ZikrCardItem
 import com.sakinah.app.feature.emotional.components.BreathingCalmDialog
 import com.sakinah.app.feature.emotional.components.MunajatNotebookDialog
@@ -53,12 +57,39 @@ fun EmotionalCompanionScreen(
     val progressMap = remember { mutableStateMapOf<Int, Int>() }
     val context = androidx.compose.ui.platform.LocalContext.current
     val sheikhPlayer = remember { com.sakinah.app.core.utils.audio.SheikhAudioPlayer(context) }
+    val isSheikhAudioPlaying by sheikhPlayer.isPlaying.collectAsState()
     var isBackgroundAudioPlaying by remember { mutableStateOf(false) }
     var showMunajatDialog by remember { mutableStateOf(false) }
 
+    var currentlyPlayingZikrId by remember { mutableStateOf<Int?>(null) }
+    var isTtsPlaying by remember { mutableStateOf(false) }
+    var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
+
     androidx.compose.runtime.DisposableEffect(Unit) {
+        var localTts: TextToSpeech? = null
+        localTts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                localTts?.language = Locale("ar")
+                localTts?.setPitch(0.88f)
+                localTts?.setSpeechRate(0.85f)
+                localTts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) { isTtsPlaying = true }
+                    override fun onDone(utteranceId: String?) {
+                        isTtsPlaying = false
+                        currentlyPlayingZikrId = null
+                    }
+                    override fun onError(utteranceId: String?) {
+                        isTtsPlaying = false
+                        currentlyPlayingZikrId = null
+                    }
+                })
+                ttsEngine = localTts
+            }
+        }
         onDispose {
             sheikhPlayer.release()
+            localTts?.stop()
+            localTts?.shutdown()
         }
     }
 
@@ -93,6 +124,8 @@ fun EmotionalCompanionScreen(
         progressMap = progressMap,
         haptic = haptic,
         isBackgroundAudioPlaying = isBackgroundAudioPlaying,
+        currentlyPlayingZikrId = currentlyPlayingZikrId,
+        isAudioActive = isSheikhAudioPlaying || isTtsPlaying,
         onToggleBackgroundAudio = { audioUrl ->
             if (isBackgroundAudioPlaying) {
                 sheikhPlayer.stop()
@@ -102,10 +135,34 @@ fun EmotionalCompanionScreen(
                 isBackgroundAudioPlaying = true
             }
         },
-        onSpeak = { zikrText ->
-            val matching = azkarList.find { it.textWithTashkeel == zikrText || it.textPlain == zikrText }
-            if (matching != null && !matching.audioUrl.isNullOrBlank()) {
-                sheikhPlayer.playUrl(matching.audioUrl)
+        onPlayZikrAudio = { zikr ->
+            if ((isSheikhAudioPlaying || isTtsPlaying) && currentlyPlayingZikrId == zikr.id) {
+                sheikhPlayer.stop()
+                ttsEngine?.stop()
+                isTtsPlaying = false
+                currentlyPlayingZikrId = null
+            } else {
+                sheikhPlayer.stop()
+                ttsEngine?.stop()
+                isTtsPlaying = false
+                currentlyPlayingZikrId = zikr.id
+
+                val urls = AzkarAudioManager.getAudioUrlsForZikr(zikr)
+                if (urls.isNotEmpty()) {
+                    sheikhPlayer.playUrls(urls) {
+                        currentlyPlayingZikrId = null
+                    }
+                } else {
+                    val textToSpeak = zikr.textPlain.ifBlank { zikr.textWithTashkeel }
+                    isTtsPlaying = true
+                    val params = android.os.Bundle()
+                    ttsEngine?.speak(
+                        textToSpeak,
+                        TextToSpeech.QUEUE_FLUSH,
+                        params,
+                        "emotion_${zikr.id}"
+                    )
+                }
             }
         },
         onSelectEmotion = { emotion ->
@@ -134,8 +191,10 @@ fun EmotionalCompanionContent(
     progressMap: Map<Int, Int>,
     haptic: HapticFeedback?,
     isBackgroundAudioPlaying: Boolean = false,
+    currentlyPlayingZikrId: Int? = null,
+    isAudioActive: Boolean = false,
     onToggleBackgroundAudio: (String) -> Unit = {},
-    onSpeak: (String) -> Unit = {},
+    onPlayZikrAudio: (ZikrEntity) -> Unit = {},
     onSelectEmotion: (EmotionItem) -> Unit,
     onSetIntensity: (Int) -> Unit = {},
     onClearSelection: () -> Unit,
@@ -503,9 +562,10 @@ fun EmotionalCompanionContent(
                             showTashkeel = true,
                             fontSizeMultiplier = 1.0f,
                             haptic = haptic,
+                            isPlayingAudio = (isAudioActive && currentlyPlayingZikrId == zikr.id),
                             onTap = { onZikrTap(zikr.id, zikr.repeatCount) },
                             onToggleFavorite = {},
-                            onSpeak = { onSpeak(zikr.textWithTashkeel) }
+                            onPlayAudio = { onPlayZikrAudio(zikr) }
                         )
                     }
                 }

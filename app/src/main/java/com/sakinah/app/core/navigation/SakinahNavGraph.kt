@@ -161,12 +161,25 @@ fun SakinahNavGraph() {
 
             // ── شاشة مواقيت الصلاة والقبلة ──
             composable(Screen.PrayerTimes.route) {
-                com.sakinah.app.feature.prayer.PrayerQiblaScreen(onNavigateBack = { navController.popBackStack() })
+                com.sakinah.app.feature.prayer.PrayerQiblaScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onOpenAdhanSettings = { navController.navigate(Screen.AdhanSettings.route) }
+                )
+            }
+
+            // ── شاشة إعدادات الأذان والمؤذنين ──
+            composable(Screen.AdhanSettings.route) {
+                com.sakinah.app.feature.prayer.AdhanSettingsScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             // ── شاشة الإعدادات ──
             composable(Screen.Settings.route) {
-                SettingsScreen(onNavigateBack = { navController.popBackStack() })
+                SettingsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onOpenAdhanSettings = { navController.navigate(Screen.AdhanSettings.route) }
+                )
             }
         }
     }

@@ -150,6 +150,7 @@ fun QuranScreen(
     var isHifzModeActive by remember { mutableStateOf(false) }
     var unmaskedWordKeys by remember { mutableStateOf(setOf<String>()) }
     var highlightedAyahNumber by remember { mutableStateOf<Int?>(null) }
+    var isFullScreen by remember { mutableStateOf(false) }
 
     val currentTheme = QuranThemeManager.getTheme(selectedThemeIndex)
 
@@ -231,13 +232,14 @@ fun QuranScreen(
             pageCount = { 604 }
         )
 
-        val pageBg = if (uiState.isNightMode) Color(0xFF121619) else currentTheme.backgroundColor
-        val pageTextColor = if (uiState.isNightMode) Color(0xFFE8EDF2) else currentTheme.textColor
+        val pageBg = if (uiState.isNightMode) Color(0xFF121417) else currentTheme.backgroundColor
+        val pageTextColor = if (uiState.isNightMode) Color(0xFFF5F0E6) else currentTheme.textColor
         val pageBorderColor = if (uiState.isNightMode) goldAccent.copy(alpha = 0.35f) else currentTheme.borderColor.copy(alpha = 0.5f)
 
         Scaffold(
             topBar = {
-                TopAppBar(
+                if (!isFullScreen) {
+                    TopAppBar(
                     title = {
                         val currentPageNum = pagerState.currentPage + 1
                         val firstAyah = uiState.pagesMap[currentPageNum]?.firstOrNull()
@@ -296,6 +298,19 @@ fun QuranScreen(
                                 Icon(
                                     imageVector = if (uiState.isNightMode) Icons.Default.LightMode else Icons.Default.DarkMode,
                                     contentDescription = "الوضع الليلي",
+                                    tint = goldAccent
+                                )
+                            }
+
+                            // 4. زر ملء الشاشة
+                            IconButton(onClick = {
+                                isFullScreen = true
+                                onFullScreenChanged(true)
+                                haptic.tick()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Fullscreen,
+                                    contentDescription = "ملء الشاشة",
                                     tint = goldAccent
                                 )
                             }
@@ -363,43 +378,46 @@ fun QuranScreen(
                         },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = pageBg)
                     )
+                }
             },
             bottomBar = {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 4.dp
-                ) {
-                    val currentPageNum = pagerState.currentPage + 1
-                    val pageAyahs = uiState.pagesMap[currentPageNum] ?: emptyList()
-                    val firstAyah = pageAyahs.firstOrNull()
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                if (!isFullScreen) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 4.dp
                     ) {
-                        Button(
-                            onClick = {
-                                if (firstAyah != null) {
-                                    viewModel.showAyahTafsir(firstAyah)
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = emeraldPrimary)
-                        ) {
-                            Icon(Icons.Default.AutoStories, contentDescription = null, tint = goldAccent, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("تدبر وعمل (صفحة ${toArabicDigits(currentPageNum)})")
-                        }
+                        val currentPageNum = pagerState.currentPage + 1
+                        val pageAyahs = uiState.pagesMap[currentPageNum] ?: emptyList()
+                        val firstAyah = pageAyahs.firstOrNull()
 
-                        Text(
-                            text = "صفحة ${toArabicDigits(currentPageNum)}",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = goldAccent
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = {
+                                    if (firstAyah != null) {
+                                        viewModel.showAyahTafsir(firstAyah)
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = emeraldPrimary)
+                            ) {
+                                Icon(Icons.Default.AutoStories, contentDescription = null, tint = goldAccent, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("تدبر وعمل (صفحة ${toArabicDigits(currentPageNum)})")
+                            }
+
+                            Text(
+                                text = "صفحة ${toArabicDigits(currentPageNum)}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = goldAccent
+                            )
+                        }
                     }
                 }
             },
@@ -597,12 +615,38 @@ fun QuranScreen(
                                             color = goldAccent
                                         )
                                     }
+                                    Spacer(modifier = Modifier.height(36.dp))
                                 }
                             }
                         }
                     }
                 }
 
+                // زر الخروج من وضع ملء الشاشة في أسفل يسار الشاشة
+                if (isFullScreen) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(16.dp),
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.65f),
+                        shadowElevation = 6.dp
+                    ) {
+                        IconButton(
+                            onClick = {
+                                isFullScreen = false
+                                onFullScreenChanged(false)
+                                haptic.tick()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FullscreenExit,
+                                contentDescription = "إلغاء ملء الشاشة",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                }
             }
         }
     } else {

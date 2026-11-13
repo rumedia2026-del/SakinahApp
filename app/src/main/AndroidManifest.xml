@@ -140,5 +140,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Social Media Center-Screen Floating Overlay Service -->
+        <service
+            android:name=".feature.social.SocialMediaOverlayService"
+            android:enabled="true"
+            android:exported="false" />
+
     </application>
 </manifest>

@@ -74,6 +74,9 @@ import com.sakinah.app.core.navigation.Screen
 import com.sakinah.app.core.utils.audio.SheikhAudioPlayer
 import com.sakinah.app.core.utils.rememberHapticFeedback
 import com.sakinah.app.data.local.db.entities.ZikrEntity
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import java.util.Locale
 import com.sakinah.app.feature.azkar.components.ZikrCardItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -97,10 +100,37 @@ fun AzkarListScreen(
     val sheikhPlayer = remember { SheikhAudioPlayer(context) }
     val isAudioPlaying by sheikhPlayer.isPlaying.collectAsState()
     var currentlyPlayingZikrId by remember { mutableStateOf<Int?>(null) }
+    var isTtsPlaying by remember { mutableStateOf(false) }
+
+    var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
 
     DisposableEffect(Unit) {
+        var localTts: TextToSpeech? = null
+        localTts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                localTts?.language = Locale("ar")
+                localTts?.setPitch(0.88f)
+                localTts?.setSpeechRate(0.85f)
+                localTts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {
+                        isTtsPlaying = true
+                    }
+                    override fun onDone(utteranceId: String?) {
+                        isTtsPlaying = false
+                        currentlyPlayingZikrId = null
+                    }
+                    override fun onError(utteranceId: String?) {
+                        isTtsPlaying = false
+                        currentlyPlayingZikrId = null
+                    }
+                })
+                ttsEngine = localTts
+            }
+        }
         onDispose {
             sheikhPlayer.release()
+            localTts?.stop()
+            localTts?.shutdown()
         }
     }
 
@@ -174,6 +204,8 @@ fun AzkarListScreen(
                                 onClick = {
                                     if (isPlayingFullWird) {
                                         sheikhPlayer.stop()
+                                        ttsEngine?.stop()
+                                        isTtsPlaying = false
                                         isPlayingFullWird = false
                                         currentlyPlayingZikrId = null
                                     } else {
@@ -381,23 +413,38 @@ fun AzkarListScreen(
                             onToggleFavorite = {
                                 viewModel.toggleFavorite(zikr)
                             },
-                            isPlayingAudio = (isAudioPlaying && currentlyPlayingZikrId == zikr.id),
-                            onPlayAudio = if (getZikrAudioUrls(zikr).isNotEmpty()) {
-                                {
-                                    if (isAudioPlaying && currentlyPlayingZikrId == zikr.id) {
-                                        sheikhPlayer.stop()
-                                        currentlyPlayingZikrId = null
-                                    } else {
-                                        val urls = getZikrAudioUrls(zikr)
-                                        if (urls.isNotEmpty()) {
-                                            currentlyPlayingZikrId = zikr.id
-                                            sheikhPlayer.playUrls(urls) {
-                                                currentlyPlayingZikrId = null
-                                            }
+                            isPlayingAudio = ((isAudioPlaying || isTtsPlaying) && currentlyPlayingZikrId == zikr.id),
+                            onPlayAudio = {
+                                if ((isAudioPlaying || isTtsPlaying) && currentlyPlayingZikrId == zikr.id) {
+                                    sheikhPlayer.stop()
+                                    ttsEngine?.stop()
+                                    isTtsPlaying = false
+                                    currentlyPlayingZikrId = null
+                                } else {
+                                    sheikhPlayer.stop()
+                                    ttsEngine?.stop()
+                                    isTtsPlaying = false
+                                    currentlyPlayingZikrId = zikr.id
+
+                                    val urls = getZikrAudioUrls(zikr)
+                                    if (urls.isNotEmpty()) {
+                                        sheikhPlayer.playUrls(urls) {
+                                            currentlyPlayingZikrId = null
                                         }
+                                    } else {
+                                        // البديل الصوتي الفوري للأدعية غير المسجلة عبر TTS المدمج
+                                        val textToSpeak = zikr.textPlain.ifBlank { zikr.textWithTashkeel }
+                                        isTtsPlaying = true
+                                        val params = android.os.Bundle()
+                                        ttsEngine?.speak(
+                                            textToSpeak,
+                                            TextToSpeech.QUEUE_FLUSH,
+                                            params,
+                                            "zikr_${zikr.id}"
+                                        )
                                     }
                                 }
-                            } else null
+                            }
                         )
                     }
 

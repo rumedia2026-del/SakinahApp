@@ -105,6 +105,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     onNavigateBack: (() -> Unit)? = null,
+    onOpenAdhanSettings: (() -> Unit)? = null,
     viewModel: SettingsViewModel = hiltViewModel(),
     azkarRepository: AzkarRepository = hiltViewModel<SettingsRepositoryHolder>().azkarRepository
 ) {
@@ -273,18 +274,54 @@ fun SettingsScreen(
                 // ═══════════════════════════════════════════════════════════════════
                 // قسم الأذان والمؤذنون الرئيسي البارز
                 // ═══════════════════════════════════════════════════════════════════
-                MuezzinSelectionCard(
-                    selectedMuezzinId = selectedMuezzinId,
-                    onSelectMuezzin = { newId ->
-                        selectedMuezzinId = newId
-                        context.getSharedPreferences("sakinah_prayer_prefs", Context.MODE_PRIVATE)
-                            .edit()
-                            .putString(com.sakinah.app.feature.prayer.AdhanAlarmScheduler.KEY_SELECTED_MUEZZIN, newId)
-                            .apply()
-                        com.sakinah.app.feature.prayer.AdhanAlarmScheduler.scheduleAllPrayers(context)
-                    },
-                    sheikhPlayer = sheikhPlayer
-                )
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .clickable { onOpenAdhanSettings?.invoke() },
+                    colors = CardDefaults.cardColors(containerColor = emeraldPrimary.copy(alpha = 0.08f)),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, goldAccent)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.NotificationsActive,
+                                contentDescription = null,
+                                tint = goldAccent,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "إعدادات الأذان والمؤذنين 🕌",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = emeraldPrimary
+                                )
+                                Text(
+                                    text = "اختيار أصوات المؤذنين، تدرج الصوت، قلب الهاتف للكتم، وصوت الفجر",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "فتح الإعدادات",
+                            tint = emeraldPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
 
                 // ═══════════════════════════════════════════════════════════════════
                 // منبّه السوشيال ميديا الفكاهي الإيماني

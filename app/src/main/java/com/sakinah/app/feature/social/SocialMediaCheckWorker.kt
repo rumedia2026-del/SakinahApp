@@ -1,21 +1,17 @@
 package com.sakinah.app.feature.social
 
 import android.content.Context
-import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
 
-@HiltWorker
-class SocialMediaCheckWorker @AssistedInject constructor(
-    @Assisted private val appContext: Context,
-    @Assisted workerParams: WorkerParameters
+class SocialMediaCheckWorker(
+    appContext: Context,
+    workerParams: WorkerParameters
 ) : CoroutineWorker(appContext, workerParams) {
 
-    override suspend fun doWork(): Result {
+    override fun doWork(): Result {
         return try {
-            SocialMediaReminderManager.checkAndNotifyIfExceeded(appContext)
+            SocialMediaReminderManager.checkAndNotifyIfExceeded(applicationContext)
             Result.success()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -24,6 +20,6 @@ class SocialMediaCheckWorker @AssistedInject constructor(
     }
 
     companion object {
-        const val WORK_NAME = "sakinah_social_media_check_work"
+        const val WORK_NAME = "social_media_check_work"
     }
 }

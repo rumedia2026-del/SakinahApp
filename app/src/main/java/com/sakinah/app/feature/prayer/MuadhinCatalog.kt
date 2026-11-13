@@ -38,6 +38,12 @@ object MuadhinCatalog {
             rawResId = R.raw.adhan_abdulbasit
         ),
         MuadhinItem(
+            id = "qatami",
+            name = "الشيخ ناصر القطامي",
+            description = "أذان خاشع ومؤثر بروحانية عالية وأداء متقن",
+            rawResId = R.raw.adhan_qatami
+        ),
+        MuadhinItem(
             id = "takbeerat",
             name = "تكبيرات الأذان فقط",
             description = "الله أكبر الله أكبر، تنبيه مبارك ومختصر لوقت الفريضة",

@@ -5,26 +5,33 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import com.batoulapps.adhan.CalculationMethod
 import com.batoulapps.adhan.Madhab
 import com.batoulapps.adhan.Prayer
 import com.batoulapps.adhan.PrayerTimes
 import com.batoulapps.adhan.data.DateComponents
 import java.util.Calendar
-import java.util.Date
 
 object AdhanAlarmScheduler {
 
     private const val PREFS_NAME = "sakinah_prayer_prefs"
     const val KEY_SELECTED_MUEZZIN = "selected_muezzin_id"
+    const val KEY_FAJR_MUEZZIN = "selected_fajr_muezzin_id"
     const val KEY_ADHAN_ENABLED = "adhan_notifications_enabled"
     const val KEY_PRE_ADHAN_ENABLED = "pre_adhan_reminder_enabled"
+    const val KEY_IQAMA_ENABLED = "iqama_reminder_enabled"
+    const val KEY_CRESCENDO_VOLUME = "adhan_crescendo_volume"
+    const val KEY_FLIP_TO_SILENCE = "adhan_flip_to_silence"
+    const val KEY_DEAF_MODE = "adhan_deaf_mode"
+    const val KEY_MOSQUE_SILENT = "adhan_mosque_silent"
+    const val KEY_ADHAN_VOLUME = "adhan_volume_level" // 0..100
 
     fun scheduleAllPrayers(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val isAdhanEnabled = prefs.getBoolean(KEY_ADHAN_ENABLED, true)
         val isPreAdhanEnabled = prefs.getBoolean(KEY_PRE_ADHAN_ENABLED, true)
-        val selectedMuezzinId = prefs.getString(KEY_SELECTED_MUEZZIN, "makkah") ?: "makkah"
+        val isIqamaEnabled = prefs.getBoolean(KEY_IQAMA_ENABLED, true)
+        val defaultMuezzinId = prefs.getString(KEY_SELECTED_MUEZZIN, "makkah") ?: "makkah"
+        val fajrMuezzinId = prefs.getString(KEY_FAJR_MUEZZIN, defaultMuezzinId) ?: defaultMuezzinId
 
         if (!isAdhanEnabled) return
 
@@ -59,13 +66,15 @@ object AdhanAlarmScheduler {
                 val prayerDate = entry.third
                 val triggerTime = prayerDate.time
 
+                val effectiveMuezzin = if (prayerType == Prayer.FAJR) fajrMuezzinId else defaultMuezzinId
+
                 // 1. تنبيه الأذان الفعلي
                 if (triggerTime > now) {
                     val requestCode = getRequestCode(dayOffset, prayerType, 0)
                     val adhanIntent = Intent(context, AdhanAlarmReceiver::class.java).apply {
                         action = AdhanAlarmReceiver.ACTION_ADHAN
                         putExtra(AdhanAlarmReceiver.EXTRA_PRAYER_NAME, prayerName)
-                        putExtra(AdhanAlarmReceiver.EXTRA_MUEZZIN_ID, selectedMuezzinId)
+                        putExtra(AdhanAlarmReceiver.EXTRA_MUEZZIN_ID, effectiveMuezzin)
                     }
                     val pendingIntent = PendingIntent.getBroadcast(
                         context,
@@ -95,7 +104,7 @@ object AdhanAlarmScheduler {
 
                 // 3. تنبيه وقت الإقامة (20 دقيقة بعد الأذان)
                 val iqamaTime = triggerTime + (20 * 60 * 1000L)
-                if (iqamaTime > now) {
+                if (isIqamaEnabled && iqamaTime > now) {
                     val iqamaRequestCode = getRequestCode(dayOffset, prayerType, 2)
                     val iqamaIntent = Intent(context, AdhanAlarmReceiver::class.java).apply {
                         action = AdhanAlarmReceiver.ACTION_IQAMA

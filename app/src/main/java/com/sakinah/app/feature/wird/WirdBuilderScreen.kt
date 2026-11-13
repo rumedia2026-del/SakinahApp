@@ -78,6 +78,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.sakinah.app.core.navigation.Screen
 import com.sakinah.app.core.utils.rememberHapticFeedback
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import java.util.Locale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.DisposableEffect
+import com.sakinah.app.core.utils.audio.SheikhAudioPlayer
+import com.sakinah.app.feature.azkar.AzkarAudioManager
 import com.sakinah.app.feature.azkar.components.ZikrCardItem
 
 private fun toArabicDigits(number: Int): String {
@@ -100,6 +107,41 @@ fun WirdBuilderScreen(
 ) {
     val favorites by viewModel.favoriteAzkar.collectAsState()
     val haptic = rememberHapticFeedback()
+    val context = LocalContext.current
+
+    val sheikhPlayer = remember { SheikhAudioPlayer(context) }
+    val isAudioPlaying by sheikhPlayer.isPlaying.collectAsState()
+    var currentlyPlayingZikrId by remember { mutableStateOf<Int?>(null) }
+    var isTtsPlaying by remember { mutableStateOf(false) }
+    var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
+
+    DisposableEffect(Unit) {
+        var localTts: TextToSpeech? = null
+        localTts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                localTts?.language = Locale("ar")
+                localTts?.setPitch(0.88f)
+                localTts?.setSpeechRate(0.85f)
+                localTts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) { isTtsPlaying = true }
+                    override fun onDone(utteranceId: String?) {
+                        isTtsPlaying = false
+                        currentlyPlayingZikrId = null
+                    }
+                    override fun onError(utteranceId: String?) {
+                        isTtsPlaying = false
+                        currentlyPlayingZikrId = null
+                    }
+                })
+                ttsEngine = localTts
+            }
+        }
+        onDispose {
+            sheikhPlayer.release()
+            localTts?.stop()
+            localTts?.shutdown()
+        }
+    }
 
     val goldAccent = Color(0xFFC8A951)
     val emeraldPrimary = Color(0xFF0F3D2E)
@@ -613,6 +655,7 @@ fun WirdBuilderScreen(
                         showTashkeel = true,
                         fontSizeMultiplier = 1.0f,
                         haptic = haptic,
+                        isPlayingAudio = ((isAudioPlaying || isTtsPlaying) && currentlyPlayingZikrId == zikr.id),
                         onTap = {
                             if (currentCount < zikr.repeatCount) {
                                 progressMap[zikr.id] = currentCount + 1
@@ -620,6 +663,36 @@ fun WirdBuilderScreen(
                         },
                         onToggleFavorite = {
                             viewModel.toggleFavorite(zikr)
+                        },
+                        onPlayAudio = {
+                            if ((isAudioPlaying || isTtsPlaying) && currentlyPlayingZikrId == zikr.id) {
+                                sheikhPlayer.stop()
+                                ttsEngine?.stop()
+                                isTtsPlaying = false
+                                currentlyPlayingZikrId = null
+                            } else {
+                                sheikhPlayer.stop()
+                                ttsEngine?.stop()
+                                isTtsPlaying = false
+                                currentlyPlayingZikrId = zikr.id
+
+                                val urls = AzkarAudioManager.getAudioUrlsForZikr(zikr)
+                                if (urls.isNotEmpty()) {
+                                    sheikhPlayer.playUrls(urls) {
+                                        currentlyPlayingZikrId = null
+                                    }
+                                } else {
+                                    val textToSpeak = zikr.textPlain.ifBlank { zikr.textWithTashkeel }
+                                    isTtsPlaying = true
+                                    val params = android.os.Bundle()
+                                    ttsEngine?.speak(
+                                        textToSpeak,
+                                        TextToSpeech.QUEUE_FLUSH,
+                                        params,
+                                        "wird_${zikr.id}"
+                                    )
+                                }
+                            }
                         }
                     )
                 }

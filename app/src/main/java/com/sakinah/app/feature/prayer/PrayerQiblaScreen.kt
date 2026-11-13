@@ -84,6 +84,7 @@ import kotlin.math.sin
 @Composable
 fun PrayerQiblaScreen(
     onNavigateBack: () -> Unit,
+    onOpenAdhanSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -323,11 +324,54 @@ fun PrayerQiblaScreen(
                 ) {
                     // بطاقة الأذان والمؤذنون الرئيسية في أعلى الشاشة
                     item(key = "muezzin_selection_card") {
-                        MuezzinSelectionCard(
-                            selectedMuezzinId = selectedMuezzinId,
-                            onSelectMuezzin = { selectedMuezzinId = it },
-                            sheikhPlayer = sheikhPlayer
-                        )
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.large)
+                                .clickable { onOpenAdhanSettings() },
+                            colors = CardDefaults.cardColors(containerColor = emeraldPrimary.copy(alpha = 0.08f)),
+                            border = androidx.compose.foundation.BorderStroke(1.5.dp, goldAccent)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.NotificationsActive,
+                                        contentDescription = null,
+                                        tint = goldAccent,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = "إعدادات الأذان والمؤذنين 🕌",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = emeraldPrimary
+                                        )
+                                        Text(
+                                            text = "اختر المؤذن، تدرج الصوت، قلب الهاتف للكتم، وصوت الفجر",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "فتح الإعدادات",
+                                    tint = emeraldPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
                     }
 
                     // 1. بوصلة القبلة الحية

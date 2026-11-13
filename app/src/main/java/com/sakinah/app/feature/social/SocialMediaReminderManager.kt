@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Process
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import com.sakinah.app.MainActivity
 import com.sakinah.app.R
@@ -63,7 +64,7 @@ object SocialMediaReminderManager {
 
     fun isEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean(KEY_ENABLED, true)
+        return prefs.getBoolean(KEY_ENABLED, false)
     }
 
     fun setEnabled(context: Context, enabled: Boolean) {
@@ -100,6 +101,14 @@ object SocialMediaReminderManager {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
+    fun hasOverlayPermission(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.canDrawOverlays(context)
+        } else {
+            true
+        }
+    }
+
     fun checkAndNotifyIfExceeded(context: Context) {
         if (!isEnabled(context)) return
 
@@ -116,7 +125,7 @@ object SocialMediaReminderManager {
 
         if (totalSocialUsageMillis >= thresholdMillis) {
             prefs.edit().putLong(KEY_LAST_NOTIFIED_TIME, now).apply()
-            showWittyNotification(context)
+            triggerSocialReminder(context)
         }
     }
 
@@ -148,9 +157,27 @@ object SocialMediaReminderManager {
         return totalTime
     }
 
-    fun showWittyNotification(context: Context) {
+    /**
+     * إظهار التنبيه الذكي:
+     * إذا كان إذن النافذة المنبثقة متاحاً، تُعرض في منتصف الشاشة فوق التطبيقات.
+     * وإن لم يكن متاحاً، يرسل Heads-Up Notification فوري مع FullScreenIntent.
+     */
+    fun triggerSocialReminder(context: Context, customMessage: String? = null) {
+        val message = customMessage ?: WITTY_MESSAGES[Random.nextInt(WITTY_MESSAGES.size)]
+
+        if (hasOverlayPermission(context)) {
+            val intent = Intent(context, SocialMediaOverlayService::class.java).apply {
+                putExtra(SocialMediaOverlayService.EXTRA_MESSAGE, message)
+            }
+            context.startService(intent)
+        } else {
+            showWittyNotification(context, message)
+        }
+    }
+
+    fun showWittyNotification(context: Context, customMessage: String? = null) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val randomMessage = WITTY_MESSAGES[Random.nextInt(WITTY_MESSAGES.size)]
+        val message = customMessage ?: WITTY_MESSAGES[Random.nextInt(WITTY_MESSAGES.size)]
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -162,7 +189,7 @@ object SocialMediaReminderManager {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // زر التفاعل: "سبّحت ✓" (+10 تسبيحات)
+        // زر التفاعل: "سبّحت +10 📿"
         val actionIntent = Intent(context, SocialMediaActionReceiver::class.java).apply {
             action = SocialMediaActionReceiver.ACTION_SOCIAL_TASBIH_DONE
             putExtra(SocialMediaActionReceiver.EXTRA_NOTIFICATION_ID, NOTIFICATION_ID)
@@ -177,14 +204,15 @@ object SocialMediaReminderManager {
         val notification = NotificationCompat.Builder(context, SakinahApplication.CHANNEL_ID_SOCIAL)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("استراحة سكينة 🌿 • السوشيال ميديا خدتك!")
-            .setContentText(randomMessage)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(randomMessage))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setFullScreenIntent(openAppPendingIntent, true)
             .setVibrate(longArrayOf(0, 250, 150, 250))
             .setAutoCancel(true)
             .setContentIntent(openAppPendingIntent)
-            .addAction(R.drawable.ic_launcher_foreground, "سبّحت ✓ (+10)", actionPendingIntent)
+            .addAction(R.drawable.ic_launcher_foreground, "سبّحت +١٠ 📿", actionPendingIntent)
             .build()
 
         manager.notify(NOTIFICATION_ID, notification)
