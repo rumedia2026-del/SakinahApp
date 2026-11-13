@@ -23,6 +23,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -63,8 +66,10 @@ fun SakinahNavGraph() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // إظهار الشريط السفلي للتبويبات الأربعة الرئيسية فقط
-    val isTopLevel = navItems.any { it.screen.route == currentRoute }
+    var isMushafFullScreen by remember { mutableStateOf(false) }
+
+    // إظهار الشريط السفلي للتبويبات الأربعة الرئيسية فقط (ويُخفى في وضع ملء الشاشة للمصحف)
+    val isTopLevel = navItems.any { it.screen.route == currentRoute } && !isMushafFullScreen
 
     Scaffold(
         bottomBar = {
@@ -122,7 +127,7 @@ fun SakinahNavGraph() {
                 HomeScreen(navController = navController)
             }
             composable(Screen.Quran.route) {
-                QuranScreen()
+                QuranScreen(onFullScreenChanged = { isMushafFullScreen = it })
             }
             composable(Screen.Tasbih.route) {
                 TasbihScreen()

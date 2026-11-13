@@ -76,22 +76,83 @@ import com.sakinah.app.feature.azkar.components.ZikrCardItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private fun getZikrAudioUrl(zikr: ZikrEntity): String {
-    if (!zikr.audioUrl.isNullOrBlank()) return zikr.audioUrl
+private fun getZikrAudioUrls(zikr: ZikrEntity): List<String> {
     val text = zikr.textPlain
+
     return when {
+        // آية الكرسي
         text.contains("الله لا اله الا هو الحي القيوم") || text.contains("اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ") ->
-            "https://everyayah.com/data/Alafasy_128kbps/002255.mp3"
+            listOf("https://everyayah.com/data/Alafasy_128kbps/002255.mp3")
+
+        // سورة الإخلاص كاملة (٤ آيات)
         text.contains("قل هو الله احد") || text.contains("قُلْ هُوَ اللَّهُ أَحَدٌ") ->
-            "https://everyayah.com/data/Alafasy_128kbps/112001.mp3"
+            (1..4).map { "https://everyayah.com/data/Alafasy_128kbps/112%03d.mp3".format(it) }
+
+        // سورة الفلق كاملة (٥ آيات)
         text.contains("قل اعوذ برب الفلق") || text.contains("قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ") ->
-            "https://everyayah.com/data/Alafasy_128kbps/113001.mp3"
+            (1..5).map { "https://everyayah.com/data/Alafasy_128kbps/113%03d.mp3".format(it) }
+
+        // سورة الناس كاملة (٦ آيات)
         text.contains("قل اعوذ برب الناس") || text.contains("قُلْ أَعُوذُ بِرَبِّ النَّاسِ") ->
-            "https://everyayah.com/data/Alafasy_128kbps/114001.mp3"
+            (1..6).map { "https://everyayah.com/data/Alafasy_128kbps/114%03d.mp3".format(it) }
+
+        // سورة الفاتحة كاملة (٧ آيات)
+        text.contains("الحمد لله رب العالمين") && (text.contains("مالك يوم الدين") || text.contains("الفاتحة")) ->
+            (1..7).map { "https://everyayah.com/data/Alafasy_128kbps/001%03d.mp3".format(it) }
+
+        // خواتيم البقرة (الآيتان 285 و 286)
         text.contains("امن الرسول") || text.contains("آمَنَ الرَّسُولُ") ->
-            "https://everyayah.com/data/Alafasy_128kbps/002285.mp3"
+            listOf(
+                "https://everyayah.com/data/Alafasy_128kbps/002285.mp3",
+                "https://everyayah.com/data/Alafasy_128kbps/002286.mp3"
+            )
+
+        // أول البقرة (1-5)
+        text.contains("الم ذلك الكتاب") || text.contains("الم ذَلِكَ الْكِتَابُ") ->
+            (1..5).map { "https://everyayah.com/data/Alafasy_128kbps/002%03d.mp3".format(it) }
+
+        // سورة الكافرون (1-6)
+        text.contains("قل يا ايها الكافرون") || text.contains("قُلْ يَا أَيُّهَا الْكَافِرُونَ") ->
+            (1..6).map { "https://everyayah.com/data/Alafasy_128kbps/109%03d.mp3".format(it) }
+
+        // الحشر (21-24)
+        text.contains("لو انزلنا هذا القران على جبل") || text.contains("لَوْ أَنْزَلْنَا هَٰذَا الْقُرْآنَ") ->
+            (21..24).map { "https://everyayah.com/data/Alafasy_128kbps/059%03d.mp3".format(it) }
+
+        // القلم (51-52)
+        text.contains("وان يكاد الذين كفروا") || text.contains("وَإِنْ يَكَادُ الَّذِينَ") ->
+            listOf(
+                "https://everyayah.com/data/Alafasy_128kbps/068051.mp3",
+                "https://everyayah.com/data/Alafasy_128kbps/068052.mp3"
+            )
+
+        // آل عمران 18
+        text.contains("شهد الله انه لا اله الا هو") || text.contains("شَهِدَ اللَّهُ أَنَّهُ") ->
+            listOf("https://everyayah.com/data/Alafasy_128kbps/003018.mp3")
+
+        // الأعراف 54-56
+        text.contains("ان ربكم الله الذي خلق السماوات") || text.contains("إِنَّ رَبَّكُمُ اللَّهُ") ->
+            (54..56).map { "https://everyayah.com/data/Alafasy_128kbps/007%03d.mp3".format(it) }
+
+        // يونس 81-82
+        text.contains("ما جئتم به السحر") || text.contains("مَا جِئْتُمْ بِهِ السِّحْرُ") ->
+            listOf("https://everyayah.com/data/Alafasy_128kbps/010081.mp3", "https://everyayah.com/data/Alafasy_128kbps/010082.mp3")
+
+        // الإسراء 82
+        text.contains("وننزل من القران ما هو شفاء") || text.contains("وَنُنَزِّلُ مِنَ الْقُرْآنِ") ->
+            listOf("https://everyayah.com/data/Alafasy_128kbps/017082.mp3")
+
+        // الشعراء 80
+        text.contains("واذا مرضت فهو يشفين") || text.contains("وَإِذَا مَرِضْتُ فَهُوَ") ->
+            listOf("https://everyayah.com/data/Alafasy_128kbps/026080.mp3")
+
+        // رابط حصن المسلم المسجل في الذكر
+        !zikr.audioUrl.isNullOrBlank() ->
+            listOf(zikr.audioUrl)
+
+        // لا يوجد أي رابط fallback إلى البسملة نهائياً!
         else ->
-            "https://everyayah.com/data/Alafasy_128kbps/001001.mp3"
+            emptyList()
     }
 }
 
@@ -185,9 +246,11 @@ fun AzkarListScreen(
                                                 if (!isPlayingFullWird) break
                                                 currentlyPlayingZikrId = zikr.id
                                                 listState.animateScrollToItem(idx)
-                                                val url = getZikrAudioUrl(zikr)
-                                                sheikhPlayer.playUrl(url)
-                                                delay(4500)
+                                                val urls = getZikrAudioUrls(zikr)
+                                                if (urls.isNotEmpty()) {
+                                                    sheikhPlayer.playUrls(urls)
+                                                    delay(4500)
+                                                }
                                             }
                                             isPlayingFullWird = false
                                             currentlyPlayingZikrId = null
@@ -387,9 +450,11 @@ fun AzkarListScreen(
                                     sheikhPlayer.stop()
                                     currentlyPlayingZikrId = null
                                 } else {
-                                    currentlyPlayingZikrId = zikr.id
-                                    val url = getZikrAudioUrl(zikr)
-                                    sheikhPlayer.playUrl(url)
+                                    val urls = getZikrAudioUrls(zikr)
+                                    if (urls.isNotEmpty()) {
+                                        currentlyPlayingZikrId = zikr.id
+                                        sheikhPlayer.playUrls(urls)
+                                    }
                                 }
                             }
                         )

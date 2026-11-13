@@ -9,7 +9,9 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.sakinah.app.feature.quran.audio.QuranAudioDownloader
 import com.sakinah.app.feature.quran.audio.QuranSheikhManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,7 +50,17 @@ class SheikhAudioPlayer(context: Context) {
             .setUsage(C.USAGE_MEDIA)
             .build()
 
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setConnectTimeoutMs(15000)
+            .setReadTimeoutMs(30000)
+            .setUserAgent("SakinahApp/1.0 (Android)")
+
+        val mediaSourceFactory = DefaultMediaSourceFactory(appContext)
+            .setDataSourceFactory(httpDataSourceFactory)
+
         exoPlayer = ExoPlayer.Builder(appContext)
+            .setMediaSourceFactory(mediaSourceFactory)
             .setAudioAttributes(audioAttributes, true)
             .build().apply {
                 addListener(object : Player.Listener {
@@ -126,11 +138,26 @@ class SheikhAudioPlayer(context: Context) {
      * تشغيل مقطع صوتي عبر رابط مباشر
      */
     fun playUrl(url: String, onComplete: (() -> Unit)? = null) {
+        playUrls(listOf(url), onComplete)
+    }
+
+    /**
+     * تشغيل قائمة مقاطع صوتية متتالية (مثل آيات السورة الواحدة أو مجموعة آيات)
+     */
+    fun playUrls(urls: List<String>, onComplete: (() -> Unit)? = null) {
+        if (urls.isEmpty()) return
         _errorMessage.value = null
         onTrackCompletedCallback = onComplete
         try {
-            val mediaItem = MediaItem.fromUri(Uri.parse(url))
-            playMediaItem(mediaItem)
+            val mediaItems = urls.map { MediaItem.fromUri(Uri.parse(it)) }
+            exoPlayer?.let { player ->
+                player.stop()
+                player.clearMediaItems()
+                player.setMediaItems(mediaItems)
+                player.prepare()
+                player.play()
+                _isPlaying.value = true
+            }
         } catch (e: Exception) {
             _errorMessage.value = "تعذر تشغيل الرابط الصوتي"
             _isPlaying.value = false

@@ -71,8 +71,12 @@ fun EmotionalCompanionScreen(
         azkarList = azkarList,
         progressMap = progressMap,
         haptic = haptic,
-        onSpeak = { _ ->
-            sheikhPlayer.playUrl("https://everyayah.com/data/Alafasy_128kbps/002255.mp3")
+        onSpeak = { zikrText ->
+            // إذا كان الذكر يحتوي على رابط صوتي مسجل
+            val matching = azkarList.find { it.textWithTashkeel == zikrText || it.textPlain == zikrText }
+            if (matching != null && !matching.audioUrl.isNullOrBlank()) {
+                sheikhPlayer.playUrl(matching.audioUrl)
+            }
         },
         onSelectEmotion = { emotion ->
             viewModel.selectEmotion(emotion)

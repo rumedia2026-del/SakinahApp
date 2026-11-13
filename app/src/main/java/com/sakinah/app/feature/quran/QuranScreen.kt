@@ -1,5 +1,6 @@
 package com.sakinah.app.feature.quran
 
+import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,6 +32,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Pause
@@ -78,6 +81,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sakinah.app.core.utils.audio.SheikhAudioPlayer
 import com.sakinah.app.core.utils.rememberHapticFeedback
@@ -97,13 +103,40 @@ private fun toArabicDigits(number: Int): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuranScreen(
-    viewModel: QuranViewModel = hiltViewModel()
+    viewModel: QuranViewModel = hiltViewModel(),
+    onFullScreenChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val haptic = rememberHapticFeedback()
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    var isFullScreen by remember { mutableStateOf(false) }
+
+    val window = (context as? Activity)?.window
+    DisposableEffect(isFullScreen, uiState.isPageMode) {
+        if (window != null) {
+            val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+            insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            if (isFullScreen && uiState.isPageMode) {
+                insetsController.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                insetsController.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        onDispose {
+            if (window != null) {
+                val ic = WindowCompat.getInsetsController(window, window.decorView)
+                ic.show(WindowInsetsCompat.Type.systemBars())
+            }
+            onFullScreenChanged(false)
+        }
+    }
+
+    LaunchedEffect(isFullScreen, uiState.isPageMode) {
+        onFullScreenChanged(isFullScreen && uiState.isPageMode)
+    }
 
     val sheikhPlayer = remember { SheikhAudioPlayer(context) }
     val isAudioPlaying by sheikhPlayer.isPlaying.collectAsState()
@@ -149,247 +182,296 @@ fun QuranScreen(
 
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        val currentPageNum = pagerState.currentPage + 1
-                        val firstAyah = uiState.pagesMap[currentPageNum]?.firstOrNull()
-                        val surahName = firstAyah?.surahName ?: "المصحف الشريف"
-                        val juzNum = firstAyah?.juz ?: 1
+                AnimatedVisibility(visible = !isFullScreen) {
+                    TopAppBar(
+                        title = {
+                            val currentPageNum = pagerState.currentPage + 1
+                            val firstAyah = uiState.pagesMap[currentPageNum]?.firstOrNull()
+                            val surahName = firstAyah?.surahName ?: "المصحف الشريف"
+                            val juzNum = firstAyah?.juz ?: 1
 
-                        Column {
+                            Column {
+                                Text(
+                                    text = "$surahName • الجزء ${toArabicDigits(juzNum)}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (uiState.isNightMode) Color.White else emeraldPrimary
+                                )
+                                Text(
+                                    text = "صفحة ${toArabicDigits(currentPageNum)} من ٦٠٤",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = goldAccent
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = viewModel::togglePageMode) {
+                                Icon(imageVector = Icons.Default.List, contentDescription = "فهرس السور", tint = goldAccent)
+                            }
+                        },
+                        actions = {
+                            // وضع ملء الشاشة الغامر
+                            IconButton(onClick = {
+                                isFullScreen = !isFullScreen
+                                haptic.tick()
+                            }) {
+                                Icon(
+                                    imageVector = if (isFullScreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                                    contentDescription = if (isFullScreen) "الخروج من ملء الشاشة" else "ملء الشاشة",
+                                    tint = goldAccent
+                                )
+                            }
+
+                            // الوضع الليلي لقراءة المصحف
+                            IconButton(onClick = viewModel::toggleNightMode) {
+                                Icon(
+                                    imageVector = if (uiState.isNightMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                    contentDescription = "الوضع الليلي",
+                                    tint = goldAccent
+                                )
+                            }
+
+                            // حجم الخط
+                            IconButton(onClick = { showFontSlider = !showFontSlider }) {
+                                Icon(imageVector = Icons.Default.FormatSize, contentDescription = "حجم الخط", tint = goldAccent)
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = pageBg)
+                    )
+                }
+            },
+            bottomBar = {
+                AnimatedVisibility(visible = !isFullScreen) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 4.dp
+                    ) {
+                        val currentPageNum = pagerState.currentPage + 1
+                        val pageAyahs = uiState.pagesMap[currentPageNum] ?: emptyList()
+                        val firstAyah = pageAyahs.firstOrNull()
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = {
+                                    if (firstAyah != null) {
+                                        viewModel.showAyahTafsir(firstAyah)
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = emeraldPrimary)
+                            ) {
+                                Icon(Icons.Default.AutoStories, contentDescription = null, tint = goldAccent, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("تدبر وعمل (صفحة ${toArabicDigits(currentPageNum)})")
+                            }
+
                             Text(
-                                text = "$surahName • الجزء ${toArabicDigits(juzNum)}",
-                                style = MaterialTheme.typography.titleMedium,
+                                text = "صفحة ${toArabicDigits(currentPageNum)}",
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = if (uiState.isNightMode) Color.White else emeraldPrimary
-                            )
-                            Text(
-                                text = "صفحة ${toArabicDigits(currentPageNum)} من ٦٠٤",
-                                style = MaterialTheme.typography.labelSmall,
                                 color = goldAccent
                             )
                         }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = viewModel::togglePageMode) {
-                            Icon(imageVector = Icons.Default.List, contentDescription = "فهرس السور", tint = goldAccent)
-                        }
-                    },
-                    actions = {
-                        // الوضع الليلي لقراءة المصحف
-                        IconButton(onClick = viewModel::toggleNightMode) {
-                            Icon(
-                                imageVector = if (uiState.isNightMode) Icons.Default.LightMode else Icons.Default.DarkMode,
-                                contentDescription = "الوضع الليلي",
-                                tint = goldAccent
-                            )
-                        }
-
-                        // حجم الخط
-                        IconButton(onClick = { showFontSlider = !showFontSlider }) {
-                            Icon(imageVector = Icons.Default.FormatSize, contentDescription = "حجم الخط", tint = goldAccent)
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = pageBg)
-                )
-            },
-            bottomBar = {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 4.dp
-                ) {
-                    val currentPageNum = pagerState.currentPage + 1
-                    val pageAyahs = uiState.pagesMap[currentPageNum] ?: emptyList()
-                    val firstAyah = pageAyahs.firstOrNull()
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = {
-                                if (firstAyah != null) {
-                                    viewModel.showAyahTafsir(firstAyah)
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = emeraldPrimary)
-                        ) {
-                            Icon(Icons.Default.AutoStories, contentDescription = null, tint = goldAccent, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("تدبر وعمل (صفحة ${toArabicDigits(currentPageNum)})")
-                        }
-
-                        Text(
-                            text = "صفحة ${toArabicDigits(currentPageNum)}",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = goldAccent
-                        )
                     }
                 }
             },
             containerColor = pageBg
         ) { innerPadding ->
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(if (isFullScreen) PaddingValues(0.dp) else innerPadding)
             ) {
-                if (showFontSlider) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surface,
-                        shadowElevation = 2.dp
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    if (showFontSlider && !isFullScreen) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surface,
+                            shadowElevation = 2.dp
                         ) {
-                            Text("حجم الخط", style = MaterialTheme.typography.labelSmall)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Slider(
-                                value = uiState.fontSizeMultiplier,
-                                onValueChange = viewModel::setFontSizeMultiplier,
-                                valueRange = 0.8f..1.5f,
-                                modifier = Modifier.weight(1f)
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("حجم الخط", style = MaterialTheme.typography.labelSmall)
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Slider(
+                                    value = uiState.fontSizeMultiplier,
+                                    onValueChange = viewModel::setFontSizeMultiplier,
+                                    valueRange = 0.8f..1.8f,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
-                }
 
-                // التصفح الأفقي من اليمين لليسار (RTL) لـ 604 صفحات
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.fillMaxSize()
-                    ) { pageIdx ->
-                        val pageNum = pageIdx + 1
-                        val ayahsOfPage = uiState.pagesMap[pageNum] ?: emptyList()
+                    // التصفح الأفقي من اليمين لليسار (RTL) لـ 604 صفحات
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize()
+                        ) { pageIdx ->
+                            val pageNum = pageIdx + 1
+                            val ayahsOfPage = uiState.pagesMap[pageNum] ?: emptyList()
+                            val pageMargin = if (isFullScreen) 2.dp else 10.dp
+                            val pageInnerPadding = if (isFullScreen) 8.dp else 14.dp
 
-                        // تصميم صفحة مصحف المدينة المنورة بالورق والإطار الزخرفي
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(10.dp)
-                                .clip(MaterialTheme.shapes.large)
-                                .border(2.dp, pageBorderColor, MaterialTheme.shapes.large)
-                                .background(pageBg)
-                                .padding(14.dp)
-                                .verticalScroll(rememberScrollState())
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                // ترويسة الصفحة
-                                val topAyah = ayahsOfPage.firstOrNull()
-                                if (topAyah != null) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = topAyah.surahName,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = goldAccent
-                                        )
-                                        Text(
-                                            text = "الجزء ${toArabicDigits(topAyah.juz)}",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = goldAccent
-                                        )
+                            // تصميم صفحة مصحف المدينة المنورة بالورق والإطار الزخرفي
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(pageMargin)
+                                    .clip(MaterialTheme.shapes.large)
+                                    .border(2.dp, pageBorderColor, MaterialTheme.shapes.large)
+                                    .background(pageBg)
+                                    .clickable {
+                                        isFullScreen = !isFullScreen
+                                        haptic.tick()
                                     }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    HorizontalDivider(color = pageBorderColor.copy(alpha = 0.4f), thickness = 1.dp)
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-
-                                // الآيات الكريمة للصفحة
-                                ayahsOfPage.forEach { ayah ->
-                                    // إذا كانت الآية بداية سورة (numberInSurah == 1)
-                                    if (ayah.numberInSurah == 1) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 8.dp)
-                                                .clip(MaterialTheme.shapes.small)
-                                                .background(goldAccent.copy(alpha = 0.12f))
-                                                .border(1.dp, goldAccent.copy(alpha = 0.4f), MaterialTheme.shapes.small)
-                                                .padding(vertical = 8.dp),
-                                            contentAlignment = Alignment.Center
+                                    .padding(pageInnerPadding)
+                                    .verticalScroll(rememberScrollState())
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    // ترويسة الصفحة
+                                    val topAyah = ayahsOfPage.firstOrNull()
+                                    if (topAyah != null) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "❖ ${ayah.surahName} ❖",
-                                                style = MaterialTheme.typography.titleMedium,
+                                                text = topAyah.surahName,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = goldAccent
+                                            )
+                                            Text(
+                                                text = "الجزء ${toArabicDigits(topAyah.juz)}",
+                                                style = MaterialTheme.typography.labelSmall,
                                                 fontWeight = FontWeight.Bold,
                                                 color = goldAccent
                                             )
                                         }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        HorizontalDivider(color = pageBorderColor.copy(alpha = 0.4f), thickness = 1.dp)
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                    }
 
-                                        if (ayah.surahNumber != 9 && ayah.surahNumber != 1) {
+                                    // الآيات الكريمة للصفحة
+                                    ayahsOfPage.forEach { ayah ->
+                                        // إذا كانت الآية بداية سورة (numberInSurah == 1)
+                                        if (ayah.numberInSurah == 1) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 8.dp)
+                                                    .clip(MaterialTheme.shapes.small)
+                                                    .background(goldAccent.copy(alpha = 0.12f))
+                                                    .border(1.dp, goldAccent.copy(alpha = 0.4f), MaterialTheme.shapes.small)
+                                                    .padding(vertical = 8.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = "❖ ${ayah.surahName} ❖",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = goldAccent
+                                                )
+                                            }
+
+                                            if (ayah.surahNumber != 9 && ayah.surahNumber != 1) {
+                                                Text(
+                                                    text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = goldAccent,
+                                                    textAlign = TextAlign.Center,
+                                                    modifier = Modifier.padding(bottom = 6.dp)
+                                                )
+                                            }
+                                        }
+
+                                        // نص الآية
+                                        Surface(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(MaterialTheme.shapes.small)
+                                                .clickable {
+                                                    viewModel.showAyahTafsir(ayah)
+                                                    haptic.tick()
+                                                }
+                                                .padding(vertical = 3.dp),
+                                            color = Color.Transparent
+                                        ) {
                                             Text(
-                                                text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = goldAccent,
+                                                text = "${ayah.text} ﴿${toArabicDigits(ayah.numberInSurah)}﴾",
+                                                style = MaterialTheme.typography.bodyLarge.copy(
+                                                    fontSize = (22 * uiState.fontSizeMultiplier).sp,
+                                                    lineHeight = (44 * uiState.fontSizeMultiplier).sp
+                                                ),
+                                                color = pageTextColor,
                                                 textAlign = TextAlign.Center,
-                                                modifier = Modifier.padding(bottom = 6.dp)
+                                                modifier = Modifier.fillMaxWidth()
                                             )
                                         }
                                     }
 
-                                    // نص الآية
-                                    Surface(
+                                    Spacer(modifier = Modifier.height(14.dp))
+
+                                    // رقم الصفحة في إطار زخرفي أسفل الصفحة
+                                    Box(
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(MaterialTheme.shapes.small)
-                                            .clickable {
-                                                viewModel.showAyahTafsir(ayah)
-                                                haptic.tick()
-                                            }
-                                            .padding(vertical = 3.dp),
-                                        color = Color.Transparent
+                                            .clip(MaterialTheme.shapes.extraSmall)
+                                            .border(1.dp, goldAccent.copy(alpha = 0.5f), MaterialTheme.shapes.extraSmall)
+                                            .padding(horizontal = 12.dp, vertical = 2.dp)
                                     ) {
                                         Text(
-                                            text = "${ayah.text} ﴿${toArabicDigits(ayah.numberInSurah)}﴾",
-                                            style = MaterialTheme.typography.bodyLarge.copy(
-                                                fontSize = (21 * uiState.fontSizeMultiplier).sp,
-                                                lineHeight = (42 * uiState.fontSizeMultiplier).sp
-                                            ),
-                                            color = pageTextColor,
-                                            textAlign = TextAlign.Center,
-                                            modifier = Modifier.fillMaxWidth()
+                                            text = "— ${toArabicDigits(pageNum)} —",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = goldAccent
                                         )
                                     }
                                 }
-
-                                Spacer(modifier = Modifier.height(14.dp))
-
-                                // رقم الصفحة في إطار زخرفي أسفل الصفحة
-                                Box(
-                                    modifier = Modifier
-                                        .clip(MaterialTheme.shapes.extraSmall)
-                                        .border(1.dp, goldAccent.copy(alpha = 0.5f), MaterialTheme.shapes.extraSmall)
-                                        .padding(horizontal = 12.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "— ${toArabicDigits(pageNum)} —",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = goldAccent
-                                    )
-                                }
                             }
                         }
+                    }
+                }
+
+                // زر عائم شبه شفاف في الزاوية العلوية للخروج من ملء الشاشة بأي لحظة
+                if (isFullScreen) {
+                    IconButton(
+                        onClick = {
+                            isFullScreen = false
+                            haptic.tick()
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.45f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FullscreenExit,
+                            contentDescription = "الخروج من ملء الشاشة",
+                            tint = goldAccent,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
             }

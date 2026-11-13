@@ -200,7 +200,7 @@ class QuranViewModel @Inject constructor(
     }
 
     fun setFontSizeMultiplier(multiplier: Float) {
-        _uiState.value = _uiState.value.copy(fontSizeMultiplier = multiplier.coerceIn(0.8f, 1.6f))
+        _uiState.value = _uiState.value.copy(fontSizeMultiplier = multiplier.coerceIn(0.8f, 1.8f))
     }
 
     fun updateKhatmahPlan(days: Int) {
