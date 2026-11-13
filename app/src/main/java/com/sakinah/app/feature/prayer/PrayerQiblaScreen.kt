@@ -173,8 +173,7 @@ fun PrayerQiblaScreen(
         monthlySchedule = PrayerTimesHelper.calculateMonthlySchedule(selectedCity)
     }
 
-    val goldAccent = Color(0xFFC8A951)
-    val deepEmerald = Color(0xFF0F3D2E)
+    val deepEmerald = emeraldPrimary
 
     // الفرق بين زاوية الهاتف وزاوية القبلة
     val qiblaBearing = prayerState.qiblaDirection.toFloat()
