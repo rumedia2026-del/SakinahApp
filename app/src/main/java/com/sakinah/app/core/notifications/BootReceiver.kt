@@ -18,8 +18,9 @@ class BootReceiver : BroadcastReceiver() {
         if (action == Intent.ACTION_BOOT_COMPLETED ||
             action == Intent.ACTION_MY_PACKAGE_REPLACED
         ) {
-            Log.i(TAG, "Device rebooted or package replaced — rescheduling Sakinah azkar reminders")
+            Log.i(TAG, "Device rebooted or package replaced — rescheduling Sakinah azkar and prayer alarms")
             NotificationScheduler.scheduleDailyReminders(context)
+            com.sakinah.app.feature.prayer.AdhanAlarmScheduler.scheduleAllPrayers(context)
         }
     }
 

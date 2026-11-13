@@ -28,7 +28,7 @@ import java.io.InputStreamReader
         DailyProgressEntity::class,
         MunajatEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class SakinahDatabase : RoomDatabase() {
@@ -74,6 +74,17 @@ abstract class SakinahDatabase : RoomDatabase() {
             INSTANCE?.let { database ->
                 scope.launch(Dispatchers.IO) {
                     populateInitialData(context, database)
+                }
+            }
+        }
+
+        override fun onOpen(db: SupportSQLiteDatabase) {
+            super.onOpen(db)
+            INSTANCE?.let { database ->
+                scope.launch(Dispatchers.IO) {
+                    if (database.zikrDao().getCount() == 0) {
+                        populateInitialData(context, database)
+                    }
                 }
             }
         }

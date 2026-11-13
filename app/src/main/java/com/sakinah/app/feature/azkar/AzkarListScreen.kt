@@ -382,18 +382,22 @@ fun AzkarListScreen(
                                 viewModel.toggleFavorite(zikr)
                             },
                             isPlayingAudio = (isAudioPlaying && currentlyPlayingZikrId == zikr.id),
-                            onPlayAudio = {
-                                if (isAudioPlaying && currentlyPlayingZikrId == zikr.id) {
-                                    sheikhPlayer.stop()
-                                    currentlyPlayingZikrId = null
-                                } else {
-                                    val urls = getZikrAudioUrls(zikr)
-                                    if (urls.isNotEmpty()) {
-                                        currentlyPlayingZikrId = zikr.id
-                                        sheikhPlayer.playUrls(urls)
+                            onPlayAudio = if (getZikrAudioUrls(zikr).isNotEmpty()) {
+                                {
+                                    if (isAudioPlaying && currentlyPlayingZikrId == zikr.id) {
+                                        sheikhPlayer.stop()
+                                        currentlyPlayingZikrId = null
+                                    } else {
+                                        val urls = getZikrAudioUrls(zikr)
+                                        if (urls.isNotEmpty()) {
+                                            currentlyPlayingZikrId = zikr.id
+                                            sheikhPlayer.playUrls(urls) {
+                                                currentlyPlayingZikrId = null
+                                            }
+                                        }
                                     }
                                 }
-                            }
+                            } else null
                         )
                     }
 

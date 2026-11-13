@@ -31,6 +31,8 @@ class SakinahApplication : Application(), Configuration.Provider {
         createNotificationChannels()
         // جدولة التنبيهات اليومية الذكية
         NotificationScheduler.scheduleDailyReminders(this)
+        // جدولة الأذان والصلوات بدقة AlarmManager
+        com.sakinah.app.feature.prayer.AdhanAlarmScheduler.scheduleAllPrayers(this)
     }
 
     private fun createNotificationChannels() {
@@ -58,12 +60,48 @@ class SakinahApplication : Application(), Configuration.Provider {
                 setShowBadge(false)
             }
 
-            manager.createNotificationChannels(listOf(azkarChannel, floatingChannel))
+            val adhanChannel = NotificationChannel(
+                CHANNEL_ID_ADHAN,
+                "أذان الصلاة الشريف",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "صوت الأذان والتكبيرات عند دخول وقت الفريضة"
+                enableVibration(true)
+                setShowBadge(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            }
+
+            val preAdhanChannel = NotificationChannel(
+                CHANNEL_ID_PRE_ADHAN,
+                "تنبيه اقتراب الصلاة والإقامة",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "تذكير بالاستعداد والوضوء قبل الأذان ووقت الإقامة"
+                enableVibration(true)
+                setShowBadge(true)
+            }
+
+            val socialChannel = NotificationChannel(
+                CHANNEL_ID_SOCIAL,
+                "منبّه السوشيال ميديا الفكاهي",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "تذكير لطيف بذكر الله عند قضاء وقت طويل في التصفح"
+                enableVibration(true)
+                setShowBadge(true)
+            }
+
+            manager.createNotificationChannels(
+                listOf(azkarChannel, floatingChannel, adhanChannel, preAdhanChannel, socialChannel)
+            )
         }
     }
 
     companion object {
         const val CHANNEL_ID_AZKAR         = "sakinah_azkar_reminders"
         const val CHANNEL_ID_FLOATING_ZIKR = "sakinah_floating_zikr"
+        const val CHANNEL_ID_ADHAN         = "sakinah_adhan_channel"
+        const val CHANNEL_ID_PRE_ADHAN     = "sakinah_pre_adhan_channel"
+        const val CHANNEL_ID_SOCIAL        = "sakinah_social_reminder_channel"
     }
 }

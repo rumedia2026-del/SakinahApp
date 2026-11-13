@@ -113,7 +113,12 @@ fun SettingsScreen(
     val preferences by viewModel.userPreferences.collectAsState()
     val haptic = rememberHapticFeedback()
     val sheikhPlayer = remember { SheikhAudioPlayer(context) }
-    var selectedMuezzinId by remember { mutableStateOf("alafasy") }
+    var selectedMuezzinId by remember {
+        mutableStateOf(
+            context.getSharedPreferences("sakinah_prayer_prefs", Context.MODE_PRIVATE)
+                .getString(com.sakinah.app.feature.prayer.AdhanAlarmScheduler.KEY_SELECTED_MUEZZIN, "makkah") ?: "makkah"
+        )
+    }
 
     androidx.compose.runtime.DisposableEffect(Unit) {
         onDispose { sheikhPlayer.release() }
@@ -270,9 +275,21 @@ fun SettingsScreen(
                 // ═══════════════════════════════════════════════════════════════════
                 MuezzinSelectionCard(
                     selectedMuezzinId = selectedMuezzinId,
-                    onSelectMuezzin = { selectedMuezzinId = it },
+                    onSelectMuezzin = { newId ->
+                        selectedMuezzinId = newId
+                        context.getSharedPreferences("sakinah_prayer_prefs", Context.MODE_PRIVATE)
+                            .edit()
+                            .putString(com.sakinah.app.feature.prayer.AdhanAlarmScheduler.KEY_SELECTED_MUEZZIN, newId)
+                            .apply()
+                        com.sakinah.app.feature.prayer.AdhanAlarmScheduler.scheduleAllPrayers(context)
+                    },
                     sheikhPlayer = sheikhPlayer
                 )
+
+                // ═══════════════════════════════════════════════════════════════════
+                // منبّه السوشيال ميديا الفكاهي الإيماني
+                // ═══════════════════════════════════════════════════════════════════
+                com.sakinah.app.feature.social.SocialMediaZikrReminderCard()
 
                 // ═══════════════════════════════════════════════════════════════════
                 // 2. المظهر ونظام الألوان والخطوط

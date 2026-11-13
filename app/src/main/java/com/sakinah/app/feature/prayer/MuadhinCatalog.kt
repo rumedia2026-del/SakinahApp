@@ -1,53 +1,60 @@
 package com.sakinah.app.feature.prayer
 
+import android.content.Context
+import androidx.annotation.RawRes
+import com.sakinah.app.R
+
 data class MuadhinItem(
     val id: String,
     val name: String,
     val description: String,
-    val previewAudioUrl: String
+    @RawRes val rawResId: Int
 )
 
 object MuadhinCatalog {
     val muadhins = listOf(
         MuadhinItem(
-            id = "alafasy",
-            name = "الشيخ مشاري راشد العفاسي",
-            description = "أذان خاشع ونقي عالي الوضوح بروحانية فريدة",
-            previewAudioUrl = "https://server8.mp3quran.net/afs/001.mp3"
-        ),
-        MuadhinItem(
             id = "makkah",
             name = "أذان المسجد الحرام بمكة المكرمة",
-            description = "النداء الروحاني العذب الخالد من الحرم المكي الشريف",
-            previewAudioUrl = "https://server8.mp3quran.net/afs/002.mp3"
+            description = "النداء الروحاني العذب الخالد - الشيخ علي بن أحمد ملا",
+            rawResId = R.raw.adhan_makkah
         ),
         MuadhinItem(
             id = "madinah",
             name = "أذان المسجد النبوي الشريف",
-            description = "نداء طمأنينة ومهابة وسكينة من مدينة رسول الله ﷺ",
-            previewAudioUrl = "https://server8.mp3quran.net/afs/003.mp3"
+            description = "نداء طمأنينة ومهابة وسكينة - الشيخ عصام بخاري",
+            rawResId = R.raw.adhan_madinah
+        ),
+        MuadhinItem(
+            id = "alafasy",
+            name = "الشيخ مشاري راشد العفاسي",
+            description = "أذان خاشع ونقي عالي الوضوح بروحانية فريدة",
+            rawResId = R.raw.adhan_afasy
         ),
         MuadhinItem(
             id = "abdelbaset",
             name = "الشيخ عبد الباسط عبد الصمد",
             description = "أذان تاريخي شجي ومهيب بنبرة مصرية أصيلة",
-            previewAudioUrl = "https://server8.mp3quran.net/afs/004.mp3"
-        ),
-        MuadhinItem(
-            id = "minshawi",
-            name = "الشيخ محمد صديق المنشاوي",
-            description = "الصوت الباكي الخاشع الذي يمس القلوب والوجدان",
-            previewAudioUrl = "https://server8.mp3quran.net/afs/005.mp3"
+            rawResId = R.raw.adhan_abdulbasit
         ),
         MuadhinItem(
             id = "takbeerat",
-            name = "تكبيرات الأذان والتلبية المختصرة",
+            name = "تكبيرات الأذان فقط",
             description = "الله أكبر الله أكبر، تنبيه مبارك ومختصر لوقت الفريضة",
-            previewAudioUrl = "https://server8.mp3quran.net/afs/006.mp3"
+            rawResId = R.raw.adhan_takbeer
         )
     )
 
     fun getMuadhinById(id: String): MuadhinItem {
         return muadhins.firstOrNull { it.id == id } ?: muadhins.first()
+    }
+
+    fun getAudioUri(context: Context, id: String): String {
+        val item = getMuadhinById(id)
+        return "android.resource://${context.packageName}/${item.rawResId}"
+    }
+
+    fun getRawResourceId(id: String): Int {
+        return getMuadhinById(id).rawResId
     }
 }

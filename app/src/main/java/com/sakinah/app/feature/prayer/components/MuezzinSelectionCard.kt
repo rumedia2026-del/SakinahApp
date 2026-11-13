@@ -188,7 +188,7 @@ fun MuezzinSelectionCard(
                                             isPlayingId = null
                                         } else {
                                             isPlayingId = muadhin.id
-                                            sheikhPlayer.playUrl(muadhin.previewAudioUrl) {
+                                            sheikhPlayer.playRawResource(muadhin.rawResId) {
                                                 isPlayingId = null
                                             }
                                         }

@@ -40,6 +40,17 @@ object NotificationScheduler {
             targetHour = 22,
             targetMinute = 30
         )
+
+        // جدولة فاحص وقت السوشيال ميديا الإيماني (كل 15 دقيقة)
+        val socialWorkRequest = PeriodicWorkRequestBuilder<com.sakinah.app.feature.social.SocialMediaCheckWorker>(
+            15, TimeUnit.MINUTES
+        ).build()
+
+        workManager.enqueueUniquePeriodicWork(
+            com.sakinah.app.feature.social.SocialMediaCheckWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            socialWorkRequest
+        )
     }
 
     private fun schedulePeriodicReminder(

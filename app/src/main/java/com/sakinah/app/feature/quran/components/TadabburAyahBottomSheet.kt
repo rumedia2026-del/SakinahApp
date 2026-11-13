@@ -85,6 +85,8 @@ fun TadabburAyahBottomSheet(
     // مشغل صوت الشيخ عبر Media3 ExoPlayer
     val sheikhPlayer = remember { SheikhAudioPlayer(context) }
     val isSheikhPlaying by sheikhPlayer.isPlaying.collectAsState()
+    val isSheikhBuffering by sheikhPlayer.isBuffering.collectAsState()
+    val sheikhErrorMessage by sheikhPlayer.errorMessage.collectAsState()
 
     // مسجل التلاوة الذاتي
     val recorder = remember { RecitationRecorder(context) }
@@ -334,7 +336,7 @@ fun TadabburAyahBottomSheet(
                         // تلاوة الشيخ مشاري العفاسي
                         Button(
                             onClick = {
-                                if (isSheikhPlaying) {
+                                if (isSheikhPlaying || isSheikhBuffering) {
                                     sheikhPlayer.stop()
                                 } else {
                                     recorder.stopPlaying()
@@ -345,15 +347,37 @@ fun TadabburAyahBottomSheet(
                             colors = ButtonDefaults.buttonColors(containerColor = emeraldPrimary),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(
-                                imageVector = if (isSheikhPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                tint = goldAccent
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            if (isSheikhBuffering) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = goldAccent,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "جاري تحميل تلاوة الآية...",
+                                    color = Color.White
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = if (isSheikhPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    tint = goldAccent
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (isSheikhPlaying) "إيقاف تلاوة الشيخ" else "استمع لتلاوة الشيخ مشاري العفاسي 🎧",
+                                    color = Color.White
+                                )
+                            }
+                        }
+
+                        if (!sheikhErrorMessage.isNullOrBlank()) {
                             Text(
-                                text = if (isSheikhPlaying) "إيقاف تلاوة الشيخ" else "استمع لتلاوة الشيخ مشاري العفاسي 🎧",
-                                color = Color.White
+                                text = sheikhErrorMessage ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(horizontal = 4.dp)
                             )
                         }
 

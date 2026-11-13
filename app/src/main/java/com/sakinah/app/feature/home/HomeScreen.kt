@@ -211,6 +211,11 @@ fun HomeContent(
                     NamesOfAllahCard()
                 }
 
+                // 5.1 منبّه السوشيال ميديا الفكاهي الإيماني
+                item(key = "social_media_reminder_card") {
+                    com.sakinah.app.feature.social.SocialMediaZikrReminderCard()
+                }
+
                 // 6. شريط البحث السريع عن الأذكار والأدعية
                 item(key = "search_bar") {
                     OutlinedTextField(

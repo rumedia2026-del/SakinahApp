@@ -124,14 +124,24 @@ class SheikhAudioPlayer(context: Context) {
      * تشغيل آية قرآنية بصوت الشيخ مشاري العفاسي
      */
     fun playQuranAyah(surahNum: Int, ayahNumInSurah: Int, onComplete: (() -> Unit)? = null) {
-        val s = String.format("%03d", surahNum)
-        val a = String.format("%03d", ayahNumInSurah)
+        val s = surahNum.toString().padStart(3, '0')
+        val a = ayahNumInSurah.toString().padStart(3, '0')
         val url = "https://everyayah.com/data/Alafasy_128kbps/$s$a.mp3"
         playUrl(url, onComplete)
     }
 
     fun playAyah(surahNum: Int, ayahNumInSurah: Int, onComplete: (() -> Unit)? = null) {
         playQuranAyah(surahNum, ayahNumInSurah, onComplete)
+    }
+
+    /**
+     * تشغيل ملف صوتي خام محلي من مجلد res/raw
+     */
+    fun playRawResource(rawResId: Int, onComplete: (() -> Unit)? = null) {
+        val uri = Uri.parse("android.resource://${appContext.packageName}/$rawResId")
+        val mediaItem = MediaItem.fromUri(uri)
+        onTrackCompletedCallback = onComplete
+        playMediaItem(mediaItem)
     }
 
     /**
