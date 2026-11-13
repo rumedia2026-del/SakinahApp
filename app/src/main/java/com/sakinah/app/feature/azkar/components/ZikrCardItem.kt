@@ -7,6 +7,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -100,11 +101,6 @@ fun ZikrCardItem(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
-            .border(
-                width = 1.dp,
-                color = cardBorderColor,
-                shape = MaterialTheme.shapes.large
-            )
             .clickable {
                 if (!isCompleted) {
                     onTap()
@@ -116,8 +112,16 @@ fun ZikrCardItem(
                 }
             },
         shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, cardBorderColor),
         colors = CardDefaults.cardColors(containerColor = cardBackground),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
+            focusedElevation = 0.dp,
+            hoveredElevation = 0.dp,
+            draggedElevation = 0.dp,
+            disabledElevation = 0.dp
+        )
     ) {
         Column(
             modifier = Modifier

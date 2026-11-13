@@ -45,6 +45,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -202,8 +204,19 @@ fun AzkarListScreen(
     val goldAccent = Color(0xFFC8A951)
     val deepEmerald = Color(0xFF0F3D2E)
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val audioErrorMessage by sheikhPlayer.errorMessage.collectAsState()
+
+    androidx.compose.runtime.LaunchedEffect(audioErrorMessage) {
+        audioErrorMessage?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            sheikhPlayer.clearError()
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 Column {
                     TopAppBar(

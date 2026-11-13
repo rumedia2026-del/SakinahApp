@@ -147,6 +147,10 @@ class SheikhAudioPlayer(context: Context) {
     fun playUrls(urls: List<String>, onComplete: (() -> Unit)? = null) {
         if (urls.isEmpty()) return
         _errorMessage.value = null
+        if (!isNetworkAvailable() && urls.any { it.startsWith("http") }) {
+            _errorMessage.value = "لا يوجد اتصال بالإنترنت لتشغيل المقطع الصوتي"
+            return
+        }
         onTrackCompletedCallback = onComplete
         try {
             val mediaItems = urls.map { MediaItem.fromUri(Uri.parse(it)) }
