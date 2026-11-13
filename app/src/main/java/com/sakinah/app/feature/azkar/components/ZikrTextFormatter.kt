@@ -13,10 +13,6 @@ data class ShortSurahItem(
 
 object ZikrTextFormatter {
 
-    val colorQuran = Color(0xFF0F3D2E)      // أخضر زمردي داكن للآيات القرآنية
-    val colorHadith = Color(0xFF2C2620)     // بني دافئ للأحاديث والأدعية
-    val colorGoldAccent = Color(0xFFB8860B) // كهرماني/ذهبي للأرقام والفواصل
-
     /**
      * فحص هل يحتوي الذكر على المعوذات والسور الثلاث القصيرة
      */
@@ -51,58 +47,63 @@ object ZikrTextFormatter {
     }
 
     /**
-     * تمييز الألوان داخل نصوص الأذكار:
-     * - الآيات القرآنية بالأخضر الزمردي (#0F3D2E)
-     * - الأحاديث والأدعية بالبني الدافئ (#2C2620)
-     * - الأرقام والفواصل بالذهبي (#B8860B)
+     * تنسيق نصوص الأذكار بدون تقطيع الحروف العربية إطلاقاً (Whole Word/Phrase Shaping).
+     * يعتمد على معايير WCAG والتباين اللوني من ألوان السمة Theme:
+     * - textPrimary: للنصوص العامة والأدعية (onSurface)
+     * - quranColor: للآيات القرآنية داخل ﴿ ... ﴾ (primary)
+     * - numberAccent: للأقواس والفواصل والأرقام (tertiary / gold)
      */
-    fun formatZikrText(text: String, isCompleted: Boolean): AnnotatedString {
-        val baseAlpha = if (isCompleted) 0.75f else 1f
+    fun formatZikrText(
+        text: String,
+        isCompleted: Boolean,
+        textPrimary: Color,
+        quranColor: Color,
+        numberAccent: Color
+    ): AnnotatedString {
+        val baseAlpha = if (isCompleted) 0.70f else 1f
+
+        // تقسيم النص إلى مقاطع كاملة بدلاً من حرف بحرف للحفاظ على HarfBuzz Arabic Shaping
+        val regex = Regex("""(﴿[^﴾]*﴾|\([^\)]*\}|（[^）]*）|\([^)]*\))""")
+        val parts = mutableListOf<Pair<String, Int>>() // Text to type: 0: normal, 1: quran, 2: bracket
+
+        var lastIdx = 0
+        val matcher = regex.toPattern().matcher(text)
+        while (matcher.find()) {
+            if (matcher.start() > lastIdx) {
+                parts.add(Pair(text.substring(lastIdx, matcher.start()), 0))
+            }
+            val matchStr = matcher.group()
+            if (matchStr.startsWith("﴿") && matchStr.endsWith("﴾")) {
+                parts.add(Pair(matchStr, 1))
+            } else {
+                parts.add(Pair(matchStr, 2))
+            }
+            lastIdx = matcher.end()
+        }
+        if (lastIdx < text.length) {
+            parts.add(Pair(text.substring(lastIdx), 0))
+        }
 
         return buildAnnotatedString {
-            var inQuran = false
-            var inBrackets = false
+            for ((segment, type) in parts) {
+                val start = length
+                append(segment)
+                val end = length
 
-            var i = 0
-            while (i < text.length) {
-                val c = text[i]
-
-                if (c == '﴿') {
-                    inQuran = true
-                    append(c)
-                    addStyle(SpanStyle(color = colorGoldAccent.copy(alpha = baseAlpha), fontWeight = FontWeight.Bold), length - 1, length)
-                    i++
-                    continue
-                } else if (c == '﴾') {
-                    inQuran = false
-                    append(c)
-                    addStyle(SpanStyle(color = colorGoldAccent.copy(alpha = baseAlpha), fontWeight = FontWeight.Bold), length - 1, length)
-                    i++
-                    continue
+                val style = when (type) {
+                    1 -> SpanStyle(
+                        color = quranColor.copy(alpha = baseAlpha),
+                        fontWeight = FontWeight.Bold
+                    )
+                    2 -> SpanStyle(
+                        color = numberAccent.copy(alpha = baseAlpha),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    else -> SpanStyle(
+                        color = textPrimary.copy(alpha = baseAlpha)
+                    )
                 }
-
-                if (c == '(' || c == '（') {
-                    inBrackets = true
-                    append(c)
-                    addStyle(SpanStyle(color = colorGoldAccent.copy(alpha = baseAlpha)), length - 1, length)
-                    i++
-                    continue
-                } else if (c == ')' || c == '）') {
-                    inBrackets = false
-                    append(c)
-                    addStyle(SpanStyle(color = colorGoldAccent.copy(alpha = baseAlpha)), length - 1, length)
-                    i++
-                    continue
-                }
-
-                append(c)
-                val style = when {
-                    inBrackets -> SpanStyle(color = colorGoldAccent.copy(alpha = baseAlpha), fontWeight = FontWeight.SemiBold)
-                    inQuran -> SpanStyle(color = colorQuran.copy(alpha = baseAlpha), fontWeight = FontWeight.Bold)
-                    else -> SpanStyle(color = colorHadith.copy(alpha = baseAlpha))
-                }
-                addStyle(style, length - 1, length)
-                i++
+                addStyle(style, start, end)
             }
         }
     }

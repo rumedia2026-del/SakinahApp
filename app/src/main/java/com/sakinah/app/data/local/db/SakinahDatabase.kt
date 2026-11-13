@@ -28,7 +28,7 @@ import java.io.InputStreamReader
         DailyProgressEntity::class,
         MunajatEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class SakinahDatabase : RoomDatabase() {

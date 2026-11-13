@@ -91,7 +91,8 @@ import com.sakinah.app.R
 import com.sakinah.app.core.ui.theme.SakinahThemeMode
 import com.sakinah.app.core.utils.BackupRestoreHelper
 import com.sakinah.app.core.utils.BatteryOptimizationHelper
-import com.sakinah.app.core.utils.rememberHapticFeedback
+import com.sakinah.app.core.utils.audio.SheikhAudioPlayer
+import com.sakinah.app.feature.prayer.components.MuezzinSelectionCard
 import com.sakinah.app.data.repository.AzkarRepository
 import com.sakinah.app.feature.prayer.PrayerTimesHelper
 import com.sakinah.app.feature.quran.audio.QuranAudioDownloader
@@ -110,6 +111,12 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val preferences by viewModel.userPreferences.collectAsState()
     val haptic = rememberHapticFeedback()
+    val sheikhPlayer = remember { SheikhAudioPlayer(context) }
+    var selectedMuezzinId by remember { mutableStateOf("alafasy") }
+
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { sheikhPlayer.release() }
+    }
 
     val guide = BatteryOptimizationHelper.getDeviceSpecificGuide(context)
     val isBatteryOptimized = !BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)
@@ -258,6 +265,15 @@ fun SettingsScreen(
                 }
 
                 // ═══════════════════════════════════════════════════════════════════
+                // قسم الأذان والمؤذنون الرئيسي البارز
+                // ═══════════════════════════════════════════════════════════════════
+                MuezzinSelectionCard(
+                    selectedMuezzinId = selectedMuezzinId,
+                    onSelectMuezzin = { selectedMuezzinId = it },
+                    sheikhPlayer = sheikhPlayer
+                )
+
+                // ═══════════════════════════════════════════════════════════════════
                 // 2. المظهر ونظام الألوان والخطوط
                 // ═══════════════════════════════════════════════════════════════════
                 Card(
@@ -278,9 +294,12 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         val themes = listOf(
-                            SakinahThemeMode.WARM_PAPER to "الورقي الدافئ (Warm Paper)",
-                            SakinahThemeMode.SOFT_SLATE_DARK to "الليلي المريح (Soft Slate)",
-                            SakinahThemeMode.PURE_OLED_BLACK to "الأسود النقي (Pure OLED Black)",
+                            SakinahThemeMode.WARM_PAPER to "المصحف الملكي الكلاسيكي (Royal Madinah)",
+                            SakinahThemeMode.MODERN_EMERALD to "الزمرد العصري (Modern Emerald)",
+                            SakinahThemeMode.CALM_OASIS to "الواحة الهادئة (Calm Oasis)",
+                            SakinahThemeMode.ANDALUSIAN to "المخطوطة الأندلسية (Andalusian Manuscript)",
+                            SakinahThemeMode.SOFT_SLATE_DARK to "سكون الليل الأزرق (Midnight Sapphire)",
+                            SakinahThemeMode.PURE_OLED_BLACK to "وضع الخشوع المطلق (OLED Pure Black)",
                             SakinahThemeMode.MATERIAL_YOU to "الألوان الديناميكية (Material You)"
                         )
 

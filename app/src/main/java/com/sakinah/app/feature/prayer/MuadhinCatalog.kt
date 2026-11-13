@@ -10,34 +10,44 @@ data class MuadhinItem(
 object MuadhinCatalog {
     val muadhins = listOf(
         MuadhinItem(
-            id = "abdelbaset",
-            name = "الشيخ عبد الباسط عبد الصمد",
-            description = "أذان خاشع وتاريخي بنبرة مصرية أصيلة",
+            id = "alafasy",
+            name = "الشيخ مشاري راشد العفاسي",
+            description = "أذان خاشع ونقي عالي الوضوح بروحانية فريدة",
             previewAudioUrl = "https://server8.mp3quran.net/afs/001.mp3"
         ),
         MuadhinItem(
             id = "makkah",
             name = "أذان المسجد الحرام بمكة المكرمة",
-            description = "النداء الروحاني العذب من الحرم المكي الشريف",
-            previewAudioUrl = "https://server8.mp3quran.net/afs/001.mp3"
+            description = "النداء الروحاني العذب الخالد من الحرم المكي الشريف",
+            previewAudioUrl = "https://server8.mp3quran.net/afs/002.mp3"
         ),
         MuadhinItem(
             id = "madinah",
             name = "أذان المسجد النبوي الشريف",
-            description = "نداء طمأنينة وسكينة من مدينة رسول الله ﷺ",
-            previewAudioUrl = "https://server8.mp3quran.net/afs/001.mp3"
+            description = "نداء طمأنينة ومهابة وسكينة من مدينة رسول الله ﷺ",
+            previewAudioUrl = "https://server8.mp3quran.net/afs/003.mp3"
         ),
         MuadhinItem(
-            id = "refat",
-            name = "الشيخ محمد رفعت",
-            description = "صوت رمضان والزمن الجميل والسكينة الخالدة",
-            previewAudioUrl = "https://server8.mp3quran.net/afs/001.mp3"
+            id = "abdelbaset",
+            name = "الشيخ عبد الباسط عبد الصمد",
+            description = "أذان تاريخي شجي ومهيب بنبرة مصرية أصيلة",
+            previewAudioUrl = "https://server8.mp3quran.net/afs/004.mp3"
         ),
         MuadhinItem(
-            id = "alaqsa",
-            name = "أذان المسجد الأقصى المبارك",
-            description = "نداء العزة والمهابة من مسرى الحبيب ﷺ",
-            previewAudioUrl = "https://server8.mp3quran.net/afs/001.mp3"
+            id = "minshawi",
+            name = "الشيخ محمد صديق المنشاوي",
+            description = "الصوت الباكي الخاشع الذي يمس القلوب والوجدان",
+            previewAudioUrl = "https://server8.mp3quran.net/afs/005.mp3"
+        ),
+        MuadhinItem(
+            id = "takbeerat",
+            name = "تكبيرات الأذان والتلبية المختصرة",
+            description = "الله أكبر الله أكبر، تنبيه مبارك ومختصر لوقت الفريضة",
+            previewAudioUrl = "https://server8.mp3quran.net/afs/006.mp3"
         )
     )
+
+    fun getMuadhinById(id: String): MuadhinItem {
+        return muadhins.firstOrNull { it.id == id } ?: muadhins.first()
+    }
 }

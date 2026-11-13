@@ -40,6 +40,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,8 +50,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sakinah.app.core.utils.HapticFeedback
@@ -81,294 +85,283 @@ fun ZikrCardItem(
     val targetProgress = (currentCount.toFloat() / zikr.repeatCount.toFloat()).coerceIn(0f, 1f)
     val animatedProgress by animateFloatAsState(targetValue = targetProgress, label = "ZikrRingProgress")
 
-    val goldAccent = Color(0xFFC8A951)
-    val emeraldPrimary = Color(0xFF0F3D2E)
+    val goldAccent = MaterialTheme.colorScheme.tertiary
+    val emeraldPrimary = MaterialTheme.colorScheme.primary
+    val mainTextColor = MaterialTheme.colorScheme.onSurface
+    val quranTextColor = MaterialTheme.colorScheme.primary
 
-    // تصميم هادئ ونظيف: عند الاكتمال تصبح الخلفية خضراء زمردية شفافة بنسبة 5% فقط مع إطار ذهبي رفيع 1dp وبدون أي تظليل رمادي
     val cardBackground = if (isCompleted) {
-        Color(0xFF0F3D2E).copy(alpha = 0.05f)
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f)
     } else {
         MaterialTheme.colorScheme.surface
     }
 
     val cardBorderColor = if (isCompleted) {
-        goldAccent.copy(alpha = 0.4f)
+        goldAccent.copy(alpha = 0.5f)
     } else {
         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     }
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.large)
-            .clickable {
-                if (!isCompleted) {
-                    onTap()
-                    if (currentCount + 1 == zikr.repeatCount) {
-                        haptic.completion(deafMode)
-                    } else {
-                        haptic.tasbihTap(deafMode)
-                    }
-                }
-            },
-        shape = MaterialTheme.shapes.large,
-        border = BorderStroke(1.dp, cardBorderColor),
-        colors = CardDefaults.cardColors(containerColor = cardBackground),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
-            focusedElevation = 0.dp,
-            hoveredElevation = 0.dp,
-            draggedElevation = 0.dp,
-            disabledElevation = 0.dp
-        )
-    ) {
-        Column(
-            modifier = Modifier
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        Card(
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(containerColor = cardBackground),
+            border = BorderStroke(1.dp, cardBorderColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            modifier = modifier
                 .fillMaxWidth()
-                .padding(20.dp)
-        ) {
-            // شريط الإجراءات العلوي
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // شارة عدد التكرار أو شارة الإتمام الذهبية
-                Box(
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.small)
-                        .background(
-                            if (isCompleted) goldAccent.copy(alpha = 0.15f)
-                            else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                        )
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = if (isCompleted) "✓ تم بحمد الله" else "التكرار: $currentCount / ${zikr.repeatCount}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isCompleted) goldAccent else MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                .clip(MaterialTheme.shapes.medium)
+                .clickable {
+                    onTap()
+                    haptic.tasbihTap(deafMode)
                 }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                // ترويسة البطاقة: شارة التكرار مع أزرار التحكم
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.small)
+                            .background(
+                                if (isCompleted) goldAccent.copy(alpha = 0.18f)
+                                else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (zikr.repeatCount > 1) "${zikr.repeatCount} مرات" else "مرة واحدة",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isCompleted) goldAccent else MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // زر التلاوة الصوتية للشيخ
-                    if (effectivePlayAudio != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // زر التلاوة الصوتية
+                        if (effectivePlayAudio != null) {
+                            IconButton(
+                                onClick = effectivePlayAudio,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlayingAudio) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                    contentDescription = "استماع بصوت الشيخ",
+                                    tint = if (isPlayingAudio) goldAccent else MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
+
+                        // زر مشاركة كصورة
                         IconButton(
-                            onClick = effectivePlayAudio,
-                            modifier = Modifier.size(32.dp)
+                            onClick = {
+                                ZikrCardGenerator.shareZikrAsImage(context, zikr, showTashkeel)
+                            },
+                            modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
-                                imageVector = if (isPlayingAudio) Icons.Default.Stop else Icons.Default.PlayArrow,
-                                contentDescription = "استماع بصوت الشيخ",
-                                tint = if (isPlayingAudio) goldAccent else MaterialTheme.colorScheme.primary,
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "مشاركة كبطاقة",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
+
                         Spacer(modifier = Modifier.width(4.dp))
-                    }
 
-                    // زر مشاركة كصورة
-                    IconButton(
-                        onClick = {
-                            ZikrCardGenerator.shareZikrAsImage(context, zikr, showTashkeel)
-                        },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "مشاركة كبطاقة",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(19.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    IconButton(
-                        onClick = onToggleFavorite,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (zikr.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                            contentDescription = "المفضلة",
-                            tint = if (zikr.isFavorite) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // تمييز نصوص الأذكار أو فصل السور القصيرة (الإخلاص، الفلق، الناس) في بطاقات فرعية أنيقة
-            val shortSurahs = ZikrTextFormatter.extractShortSurahs(displayText)
-            if (shortSurahs != null) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    shortSurahs.forEach { surah ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.medium,
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isCompleted) Color(0xFF0F3D2E).copy(alpha = 0.04f) else Color(0xFFF9F7F2)
-                            ),
-                            border = BorderStroke(1.dp, goldAccent.copy(alpha = 0.35f))
+                        IconButton(
+                            onClick = onToggleFavorite,
+                            modifier = Modifier.size(36.dp)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = surah.title,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = goldAccent
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = ZikrTextFormatter.formatZikrText(surah.text, isCompleted),
-                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                        fontSize = (19 * fontSizeMultiplier).sp,
-                                        lineHeight = (36 * fontSizeMultiplier).sp
-                                    ),
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
+                            Icon(
+                                imageVector = if (zikr.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                contentDescription = "المفضلة",
+                                tint = if (zikr.isFavorite) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
-            } else {
-                // نص الذكر الملوّن (الآيات بالأخضر، الأدعية بالبني، الأرقام بالذهبي)
-                Text(
-                    text = ZikrTextFormatter.formatZikrText(displayText, isCompleted),
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = (21 * fontSizeMultiplier).sp,
-                        lineHeight = (38 * fontSizeMultiplier).sp
-                    ),
-                    textAlign = TextAlign.Right,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // أسفل البطاقة: الفضل والعداد الدائري المتحرك
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (!zikr.virtueText.isNullOrBlank() || !zikr.sourceReference.isNullOrBlank()) {
-                    Row(
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.small)
-                            .clickable { isExpanded = !isExpanded }
-                            .padding(vertical = 6.dp, horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                // تمييز نصوص الأذكار أو فصل السور القصيرة (الإخلاص، الفلق، الناس)
+                val shortSurahs = ZikrTextFormatter.extractShortSurahs(displayText)
+                if (shortSurahs != null) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text(
-                            text = if (isExpanded) "إخفاء التفاصيل" else "فضل الذكر وتخريجه",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        shortSurahs.forEach { surah ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.medium,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isCompleted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f)
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                ),
+                                border = BorderStroke(1.dp, goldAccent.copy(alpha = 0.35f))
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = surah.title,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = goldAccent
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = ZikrTextFormatter.formatZikrText(
+                                            text = surah.text,
+                                            isCompleted = isCompleted,
+                                            textPrimary = mainTextColor,
+                                            quranColor = quranTextColor,
+                                            numberAccent = goldAccent
+                                        ),
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontSize = (19 * fontSizeMultiplier).sp,
+                                            lineHeight = (36 * fontSizeMultiplier).sp,
+                                            textDirection = TextDirection.Rtl
+                                        ),
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
                     }
                 } else {
-                    Spacer(modifier = Modifier.width(1.dp))
+                    // نص الذكر العام بمحاذاة RTL وهوامش آمنة بدون تقطيع الحروف
+                    Text(
+                        text = ZikrTextFormatter.formatZikrText(
+                            text = displayText,
+                            isCompleted = isCompleted,
+                            textPrimary = mainTextColor,
+                            quranColor = quranTextColor,
+                            numberAccent = goldAccent
+                        ),
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = (21 * fontSizeMultiplier).sp,
+                            lineHeight = (38 * fontSizeMultiplier).sp,
+                            textDirection = TextDirection.Rtl
+                        ),
+                        textAlign = TextAlign.Right,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
-                // حلقة التقدم الدائرية الأنيقة بدون إطارات سميكة مشوهة
-                Box(
-                    modifier = Modifier.size(54.dp),
-                    contentAlignment = Alignment.Center
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // أسفل البطاقة: الفضل والعداد الدائري المتحرك
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CircularProgressIndicator(
-                        progress = { animatedProgress },
-                        modifier = Modifier.size(54.dp),
-                        color = if (isCompleted) goldAccent else emeraldPrimary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        strokeWidth = 3.5.dp
-                    )
+                    if (!zikr.virtueText.isNullOrBlank() || !zikr.sourceReference.isNullOrBlank()) {
+                        Row(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable { isExpanded = !isExpanded }
+                                .padding(vertical = 6.dp, horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isExpanded) "إخفاء التفاصيل" else "فضل الذكر وتخريجه",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Icon(
+                                imageVector = if (isExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(1.dp))
+                    }
+
+                    // حلقة التقدم الدائرية الأنيقة
                     Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isCompleted) goldAccent.copy(alpha = 0.2f)
-                                else emeraldPrimary
-                            ),
+                        modifier = Modifier.size(54.dp),
                         contentAlignment = Alignment.Center
                     ) {
+                        CircularProgressIndicator(
+                            progress = { animatedProgress },
+                            modifier = Modifier.size(54.dp),
+                            color = if (isCompleted) goldAccent else emeraldPrimary,
+                            strokeWidth = 3.5.dp,
+                            trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                        )
+
                         if (isCompleted) {
                             Icon(
                                 imageVector = Icons.Default.Check,
-                                contentDescription = "اكتمل",
+                                contentDescription = "تم",
                                 tint = goldAccent,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         } else {
                             Text(
                                 text = "${zikr.repeatCount - currentCount}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
                 }
-            }
 
-            // التفاصيل المطوية
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 14.dp)
+                // قسم الفضل والتخريج القابل للطي
+                AnimatedVisibility(
+                    visible = isExpanded,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
                 ) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                        thickness = 1.dp
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp)
+                    ) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            thickness = 1.dp
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
 
-                    if (!zikr.virtueText.isNullOrBlank()) {
-                        Text(
-                            text = "فضل هذا الذكر:",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = goldAccent
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = zikr.virtueText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                        if (!zikr.virtueText.isNullOrBlank()) {
+                            Text(
+                                text = "الفضل: ${zikr.virtueText}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 20.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
 
-                    if (!zikr.sourceReference.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "المصدر: ${zikr.sourceReference}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
+                        if (!zikr.sourceReference.isNullOrBlank()) {
+                            Text(
+                                text = "المصدر: ${zikr.sourceReference}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = goldAccent,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }

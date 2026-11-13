@@ -2,6 +2,7 @@ package com.sakinah.app.core.ui.theme
 
 import android.os.Build
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
@@ -10,93 +11,97 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 // ═══════════════════════════════════════════════════════════════════
-//  SAKINAH THEME SYSTEM
-//  نظام الثيمات الكامل للتطبيق — 4 ثيمات مدروسة
+//  SAKINAH THEME SYSTEM — 6 Comprehensive Academic Themes
 // ═══════════════════════════════════════════════════════════════════
 
-/**
- * أنواع الثيمات المتاحة في التطبيق.
- */
 enum class SakinahThemeMode {
-    /** الورقي الدافئ — افتراضي، مريح للعين نهاراً */
+    /** 1. المصحف الملكي الكلاسيكي (Royal Madinah) */
     WARM_PAPER,
-    /** الليلي الهادئ — رمادي داكن مزرق للقراءة الليلية */
+    /** 2. الزمرد العصري (Modern Emerald) */
+    MODERN_EMERALD,
+    /** 3. الواحة الهادئة (Calm Oasis) */
+    CALM_OASIS,
+    /** 4. المخطوطة الأندلسية (Andalusian Manuscript) */
+    ANDALUSIAN,
+    /** 5. سكون الليل الأزرق (Midnight Sapphire) */
     SOFT_SLATE_DARK,
-    /** الأسود النقي — OLED لتوفير البطارية */
+    /** 6. وضع الخشوع المطلق (OLED Pure Black) */
     PURE_OLED_BLACK,
-    /** ألوان ديناميكية Material You — Android 12+ فقط */
+    /** ألوان ديناميكية Material You */
     MATERIAL_YOU;
 
-    /** هل هذا ثيم داكن؟ */
     val isDark: Boolean get() = this == SOFT_SLATE_DARK || this == PURE_OLED_BLACK
 }
 
-/**
- * بيانات الثيم الممتدة خارج نظام Material3 القياسي.
- * تحتوي على ألوان سكينة المخصصة.
- */
 @Immutable
 data class SakinahExtendedColors(
-    /** لون الذهبي المستخدم للتمييز وعناصر الجمعة */
-    val goldAccent: androidx.compose.ui.graphics.Color,
-    /** خلفية بطاقة الذكر الذكية (Smart Hero Card) */
-    val heroCardBackground: androidx.compose.ui.graphics.Color,
-    /** لون شريط التقدم للمسبحة */
-    val tasbihProgress: androidx.compose.ui.graphics.Color,
-    /** لون خلفية وضع التركيز (Zen Mode) */
-    val zenBackground: androidx.compose.ui.graphics.Color,
-    /** لون النص في وضع التركيز */
-    val zenTextColor: androidx.compose.ui.graphics.Color,
+    val goldAccent: Color,
+    val heroCardBackground: Color,
+    val tasbihProgress: Color,
+    val zenBackground: Color,
+    val zenTextColor: Color,
 )
-
-// ── Composition Locals ────────────────────────────────────────────
 
 val LocalSakinahThemeMode = compositionLocalOf { SakinahThemeMode.WARM_PAPER }
 
 val LocalSakinahExtendedColors = staticCompositionLocalOf {
-    warmPaperExtendedColors
+    royalMadinahExtendedColors
 }
 
 val LocalFontSizeMultiplier = compositionLocalOf { 1f }
 
-// ── Extended Color Sets ───────────────────────────────────────────
-
-val warmPaperExtendedColors = SakinahExtendedColors(
-    goldAccent          = WarmPaperColors.Tertiary,
-    heroCardBackground  = androidx.compose.ui.graphics.Color(0xFFE8F5E9),
-    tasbihProgress      = WarmPaperColors.Primary,
-    zenBackground       = androidx.compose.ui.graphics.Color(0xFFFAF8F5),
-    zenTextColor        = WarmPaperColors.OnBackground,
+val royalMadinahExtendedColors = SakinahExtendedColors(
+    goldAccent          = RoyalMadinahColors.Tertiary,
+    heroCardBackground  = Color(0xFFE8F5E9),
+    tasbihProgress      = RoyalMadinahColors.Primary,
+    zenBackground       = RoyalMadinahColors.Background,
+    zenTextColor        = RoyalMadinahColors.OnBackground,
 )
 
-val softSlateDarkExtendedColors = SakinahExtendedColors(
-    goldAccent          = SoftSlateDarkColors.Tertiary,
-    heroCardBackground  = androidx.compose.ui.graphics.Color(0xFF1A2820),
-    tasbihProgress      = SoftSlateDarkColors.Primary,
-    zenBackground       = SoftSlateDarkColors.Background,
-    zenTextColor        = SoftSlateDarkColors.OnBackground,
+val modernEmeraldExtendedColors = SakinahExtendedColors(
+    goldAccent          = ModernEmeraldColors.Tertiary,
+    heroCardBackground  = Color(0xFFE0F7EA),
+    tasbihProgress      = ModernEmeraldColors.Primary,
+    zenBackground       = ModernEmeraldColors.Background,
+    zenTextColor        = ModernEmeraldColors.OnBackground,
+)
+
+val calmOasisExtendedColors = SakinahExtendedColors(
+    goldAccent          = CalmOasisColors.Tertiary,
+    heroCardBackground  = Color(0xFFDCEEE7),
+    tasbihProgress      = CalmOasisColors.Primary,
+    zenBackground       = CalmOasisColors.Background,
+    zenTextColor        = CalmOasisColors.OnBackground,
+)
+
+val andalusianExtendedColors = SakinahExtendedColors(
+    goldAccent          = AndalusianColors.Tertiary,
+    heroCardBackground  = Color(0xFFF7EBD7),
+    tasbihProgress      = AndalusianColors.Primary,
+    zenBackground       = AndalusianColors.Background,
+    zenTextColor        = AndalusianColors.OnBackground,
+)
+
+val midnightSapphireExtendedColors = SakinahExtendedColors(
+    goldAccent          = MidnightSapphireColors.Tertiary,
+    heroCardBackground  = Color(0xFF1E293B),
+    tasbihProgress      = MidnightSapphireColors.Primary,
+    zenBackground       = MidnightSapphireColors.Background,
+    zenTextColor        = MidnightSapphireColors.OnBackground,
 )
 
 val oledBlackExtendedColors = SakinahExtendedColors(
     goldAccent          = OledBlackColors.Tertiary,
-    heroCardBackground  = androidx.compose.ui.graphics.Color(0xFF0A0A0A),
+    heroCardBackground  = Color(0xFF141414),
     tasbihProgress      = OledBlackColors.Primary,
     zenBackground       = OledBlackColors.Background,
     zenTextColor        = OledBlackColors.OnBackground,
 )
 
-// ── Main Theme Composable ─────────────────────────────────────────
-
-/**
- * الثيم الرئيسي لتطبيق سكينة.
- *
- * @param themeMode       الثيم المختار من [SakinahThemeMode]
- * @param fontSizeMultiplier  معامل حجم الخط (0.8f - 1.4f)
- * @param content         محتوى Compose
- */
 @Composable
 fun SakinahTheme(
     themeMode: SakinahThemeMode = SakinahThemeMode.WARM_PAPER,
@@ -105,35 +110,42 @@ fun SakinahTheme(
 ) {
     val context = LocalContext.current
 
-    // اختيار مجموعة الألوان بناءً على الثيم
     val colorScheme = when (themeMode) {
-        SakinahThemeMode.WARM_PAPER      -> WarmPaperLightColorScheme
-        SakinahThemeMode.SOFT_SLATE_DARK -> SoftSlateDarkColorScheme
-        SakinahThemeMode.PURE_OLED_BLACK -> OledBlackColorScheme
-        SakinahThemeMode.MATERIAL_YOU    -> {
-            // Material You: متاح فقط على Android 12 (S) وما فوق
+        SakinahThemeMode.WARM_PAPER       -> RoyalMadinahColorScheme
+        SakinahThemeMode.MODERN_EMERALD   -> ModernEmeraldColorScheme
+        SakinahThemeMode.CALM_OASIS       -> CalmOasisColorScheme
+        SakinahThemeMode.ANDALUSIAN       -> AndalusianColorScheme
+        SakinahThemeMode.SOFT_SLATE_DARK  -> MidnightSapphireColorScheme
+        SakinahThemeMode.PURE_OLED_BLACK  -> OledBlackColorScheme
+        SakinahThemeMode.MATERIAL_YOU     -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (themeMode.isDark) {
-                    dynamicDarkColorScheme(context)
-                } else {
-                    dynamicLightColorScheme(context)
-                }
+                if (themeMode.isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             } else {
-                // Fallback للأجهزة القديمة: Warm Paper
-                WarmPaperLightColorScheme
+                RoyalMadinahColorScheme
             }
         }
     }
 
-    // الألوان الممتدة حسب الثيم
-    val extendedColors = when (themeMode) {
-        SakinahThemeMode.WARM_PAPER      -> warmPaperExtendedColors
-        SakinahThemeMode.SOFT_SLATE_DARK -> softSlateDarkExtendedColors
-        SakinahThemeMode.PURE_OLED_BLACK -> oledBlackExtendedColors
-        SakinahThemeMode.MATERIAL_YOU    -> warmPaperExtendedColors   // Material You يتبع الورقي
+    val shapes: Shapes = when (themeMode) {
+        SakinahThemeMode.WARM_PAPER       -> RoyalMadinahShapes
+        SakinahThemeMode.MODERN_EMERALD   -> ModernEmeraldShapes
+        SakinahThemeMode.CALM_OASIS       -> CalmOasisShapes
+        SakinahThemeMode.ANDALUSIAN       -> AndalusianShapes
+        SakinahThemeMode.SOFT_SLATE_DARK  -> MidnightSapphireShapes
+        SakinahThemeMode.PURE_OLED_BLACK  -> OledBlackShapes
+        SakinahThemeMode.MATERIAL_YOU     -> RoyalMadinahShapes
     }
 
-    // الطباعة بمعامل الحجم المختار
+    val extendedColors = when (themeMode) {
+        SakinahThemeMode.WARM_PAPER       -> royalMadinahExtendedColors
+        SakinahThemeMode.MODERN_EMERALD   -> modernEmeraldExtendedColors
+        SakinahThemeMode.CALM_OASIS       -> calmOasisExtendedColors
+        SakinahThemeMode.ANDALUSIAN       -> andalusianExtendedColors
+        SakinahThemeMode.SOFT_SLATE_DARK  -> midnightSapphireExtendedColors
+        SakinahThemeMode.PURE_OLED_BLACK  -> oledBlackExtendedColors
+        SakinahThemeMode.MATERIAL_YOU     -> royalMadinahExtendedColors
+    }
+
     val typography = sakinahTypography(fontSizeMultiplier)
 
     CompositionLocalProvider(
@@ -144,27 +156,22 @@ fun SakinahTheme(
         MaterialTheme(
             colorScheme = colorScheme,
             typography  = typography,
-            shapes      = SakinahShapes,
+            shapes      = shapes,
             content     = content,
         )
     }
 }
 
-// ── Convenience Accessors ─────────────────────────────────────────
-
-/** وصول سريع لألوان سكينة الممتدة من أي Composable */
 val MaterialTheme.sakinahColors: SakinahExtendedColors
     @Composable
     @ReadOnlyComposable
     get() = LocalSakinahExtendedColors.current
 
-/** وصول سريع لمعامل حجم الخط الحالي */
 val MaterialTheme.fontSizeMultiplier: Float
     @Composable
     @ReadOnlyComposable
     get() = LocalFontSizeMultiplier.current
 
-/** وصول سريع لنوع الثيم الحالي */
 val MaterialTheme.sakinahThemeMode: SakinahThemeMode
     @Composable
     @ReadOnlyComposable

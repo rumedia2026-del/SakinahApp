@@ -73,7 +73,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sakinah.app.core.utils.rememberHapticFeedback
+import com.sakinah.app.core.utils.audio.SheikhAudioPlayer
+import com.sakinah.app.feature.prayer.components.MuezzinSelectionCard
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -86,6 +87,12 @@ fun PrayerQiblaScreen(
 ) {
     val context = LocalContext.current
     val haptic = rememberHapticFeedback()
+    val sheikhPlayer = remember { SheikhAudioPlayer(context) }
+    var selectedMuezzinId by remember { mutableStateOf("alafasy") }
+
+    DisposableEffect(Unit) {
+        onDispose { sheikhPlayer.release() }
+    }
 
     var selectedCity by remember { mutableStateOf(PrayerTimesHelper.SUPPORTED_CITIES.first()) }
     var prayerState by remember { mutableStateOf(PrayerTimesHelper.calculateTodayPrayers(selectedCity)) }
@@ -313,6 +320,15 @@ fun PrayerQiblaScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // بطاقة الأذان والمؤذنون الرئيسية في أعلى الشاشة
+                    item(key = "muezzin_selection_card") {
+                        MuezzinSelectionCard(
+                            selectedMuezzinId = selectedMuezzinId,
+                            onSelectMuezzin = { selectedMuezzinId = it },
+                            sheikhPlayer = sheikhPlayer
+                        )
+                    }
+
                     // 1. بوصلة القبلة الحية
                     item(key = "qibla_compass") {
                         Card(
