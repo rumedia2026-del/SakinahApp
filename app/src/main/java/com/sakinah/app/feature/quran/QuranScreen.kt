@@ -2,14 +2,23 @@ package com.sakinah.app.feature.quran
 
 import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -17,12 +26,61 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,7 +89,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,9 +101,9 @@ import com.sakinah.app.core.utils.rememberHapticFeedback
 import com.sakinah.app.feature.quran.audio.QuranAudioDownloader
 import com.sakinah.app.feature.quran.audio.QuranSheikhManager
 import com.sakinah.app.feature.quran.components.BookmarkHeroCard
-import com.sakinah.app.feature.quran.components.ReciterSelectorBar
-import com.sakinah.app.feature.quran.components.SurahItemCard
+import com.sakinah.app.feature.quran.components.KhatmahPlanCard
 import com.sakinah.app.feature.quran.components.TadabburAyahBottomSheet
+import com.sakinah.app.feature.quran.model.AyahItem
 import kotlinx.coroutines.launch
 
 private fun toArabicDigits(number: Int): String {
@@ -57,52 +114,63 @@ private fun toArabicDigits(number: Int): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuranScreen(
-    viewModel: QuranViewModel = hiltViewModel()
+    viewModel: QuranViewModel = hiltViewModel(),
+    onFullScreenChanged: (Boolean) -> Unit = {}
 ) {
-    val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
     val haptic = rememberHapticFeedback()
     val scope = rememberCoroutineScope()
-
-    val sheikhPlayer = remember { SheikhAudioPlayer(context) }
-    val isPlayingAudio by sheikhPlayer.isPlaying.collectAsState()
-    val currentlyPlayingSurah by sheikhPlayer.currentlyPlayingSurah.collectAsState()
-    val currentAudioTitle by sheikhPlayer.currentPlayingTitle.collectAsState()
-
-    DisposableEffect(Unit) {
-        onDispose { sheikhPlayer.release() }
-    }
-
-    var showFontSlider by remember { mutableStateOf(false) }
-    var showThemeDialog by remember { mutableStateOf(false) }
-    var showMoreMenu by remember { mutableStateOf(false) }
-    var selectedThemeIndex by remember { mutableIntStateOf(1) } // Default Warm Paper
-
-    var isTajweedEnabled by remember { mutableStateOf(true) }
-    var isHifzModeActive by remember { mutableStateOf(false) }
-    var isFullScreen by remember { mutableStateOf(false) }
-    var showFullScreenExitBar by remember { mutableStateOf(false) }
-    var unmaskedWordKeys by remember { mutableStateOf(setOf<String>()) }
-    var highlightedAyahNumber by remember { mutableStateOf<Int?>(null) }
-
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val goldAccent = if (uiState.isNightMode) Color(0xFFFCD34D) else Color(0xFFB8860B)
-    val emeraldPrimary = Color(0xFF0F3D2E)
+    var isFullScreen by remember { mutableStateOf(false) }
+    var showMoreMenu by remember { mutableStateOf(false) }
 
-    // إدارة ملء الشاشة الغامر
-    val activity = context as? Activity
-    LaunchedEffect(isFullScreen) {
-        activity?.window?.let { window ->
+    val window = (context as? Activity)?.window
+    DisposableEffect(isFullScreen, uiState.isPageMode) {
+        if (window != null) {
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-            if (isFullScreen) {
+            insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            if (isFullScreen && uiState.isPageMode) {
                 insetsController.hide(WindowInsetsCompat.Type.systemBars())
-                insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             } else {
                 insetsController.show(WindowInsetsCompat.Type.systemBars())
             }
         }
+        onDispose {
+            if (window != null) {
+                val ic = WindowCompat.getInsetsController(window, window.decorView)
+                ic.show(WindowInsetsCompat.Type.systemBars())
+            }
+            onFullScreenChanged(false)
+        }
     }
+
+    LaunchedEffect(isFullScreen, uiState.isPageMode) {
+        onFullScreenChanged(isFullScreen && uiState.isPageMode)
+    }
+
+    val sheikhPlayer = remember { SheikhAudioPlayer(context) }
+    val isAudioPlaying by sheikhPlayer.isPlaying.collectAsState()
+    val isBuffering by sheikhPlayer.isBuffering.collectAsState()
+    val currentlyPlayingSurah by sheikhPlayer.currentlyPlayingSurah.collectAsState()
+    val audioTitle by sheikhPlayer.currentPlayingTitle.collectAsState()
+
+    DisposableEffect(Unit) {
+        viewModel.checkDownloadedSurahs(context)
+        onDispose { sheikhPlayer.release() }
+    }
+
+    val goldAccent = Color(0xFFC8A951)
+    val emeraldPrimary = Color(0xFF0F3D2E)
+
+    var showFontSlider by remember { mutableStateOf(false) }
+    var isTajweedEnabled by remember { mutableStateOf(false) }
+    var selectedThemeIndex by remember { mutableIntStateOf(0) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var isHifzModeActive by remember { mutableStateOf(false) }
+    var unmaskedWordKeys by remember { mutableStateOf(setOf<String>()) }
+    var highlightedAyahNumber by remember { mutableStateOf<Int?>(null) }
 
     val currentTheme = QuranThemeManager.getTheme(selectedThemeIndex)
 
@@ -166,7 +234,7 @@ fun QuranScreen(
             sheetState = sheetState,
             onDismiss = {
                 highlightedAyahNumber = null
-                viewModel.closeTafsir()
+                viewModel::closeTafsir.invoke()
             },
             onBookmark = {
                 viewModel.saveBookmark(uiState.selectedAyahForTafsir!!)
@@ -217,11 +285,11 @@ fun QuranScreen(
                         },
                         navigationIcon = {
                             IconButton(onClick = viewModel::togglePageMode) {
-                                Icon(imageVector = Icons.Default.List, contentDescription = "فهرس السور", tint = goldAccent)
+                                Icon(imageVector = Icons.Default.AutoStories, contentDescription = "فهرس السور", tint = goldAccent)
                             }
                         },
                         actions = {
-                            // 1. وضع ملء الشاشة الغامر
+                            // 1. ملء الشاشة الغامر
                             IconButton(onClick = {
                                 isFullScreen = true
                                 haptic.tick()
@@ -233,7 +301,7 @@ fun QuranScreen(
                                 )
                             }
 
-                            // 2. التجويد الملون
+                            // 2. تلوين أحكام التجويد
                             IconButton(onClick = {
                                 isTajweedEnabled = !isTajweedEnabled
                                 haptic.tick()
@@ -245,7 +313,7 @@ fun QuranScreen(
                                 )
                             }
 
-                            // 3. الوضع الليلي لقراءة المصحف
+                            // 3. الوضع الليلي
                             IconButton(onClick = viewModel::toggleNightMode) {
                                 Icon(
                                     imageVector = if (uiState.isNightMode) Icons.Default.LightMode else Icons.Default.DarkMode,
@@ -254,12 +322,12 @@ fun QuranScreen(
                                 )
                             }
 
-                            // 4. قائمة الخيارات الإضافية (المحفظ، الثيمات، حجم الخط)
+                            // 4. القائمة المدمجة لباقي الخيارات
                             Box {
                                 IconButton(onClick = { showMoreMenu = true }) {
                                     Icon(
                                         imageVector = Icons.Default.MoreVert,
-                                        contentDescription = "المزيد من الخيارات",
+                                        contentDescription = "المزيد",
                                         tint = goldAccent
                                     )
                                 }
@@ -268,7 +336,7 @@ fun QuranScreen(
                                     onDismissRequest = { showMoreMenu = false }
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("المحفّظ الذكي (إخفاء الكلمات)") },
+                                        text = { Text("المحفّظ الذكي") },
                                         leadingIcon = {
                                             Icon(
                                                 imageVector = Icons.Default.School,
@@ -283,7 +351,7 @@ fun QuranScreen(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("سمات وتصميم المصحف (٦ سمات)") },
+                                        text = { Text("سمات المصحف (٦ سمات)") },
                                         leadingIcon = {
                                             Icon(
                                                 imageVector = Icons.Default.ColorLens,
@@ -298,7 +366,7 @@ fun QuranScreen(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("تعديل حجم الخط") },
+                                        text = { Text("حجم الخط") },
                                         leadingIcon = {
                                             Icon(
                                                 imageVector = Icons.Default.FormatSize,
@@ -402,10 +470,10 @@ fun QuranScreen(
                         ) { pageIdx ->
                             val pageNum = pageIdx + 1
                             val ayahsOfPage = uiState.pagesMap[pageNum] ?: emptyList()
-                            val pageMargin = if (isFullScreen) 2.dp else 8.dp
-                            val pageInnerPadding = if (isFullScreen) 8.dp else 12.dp
+                            val pageMargin = if (isFullScreen) 2.dp else 10.dp
+                            val pageInnerPadding = if (isFullScreen) 8.dp else 14.dp
 
-                            // تصميم صفحة مصحف تدبر وعمل الموحدة
+                            // تصميم صفحة مصحف المدينة المنورة بالورق والإطار الزخرفي
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -414,11 +482,7 @@ fun QuranScreen(
                                     .border(2.dp, pageBorderColor, MaterialTheme.shapes.large)
                                     .background(pageBg)
                                     .clickable {
-                                        if (isFullScreen) {
-                                            showFullScreenExitBar = !showFullScreenExitBar
-                                        } else {
-                                            isFullScreen = true
-                                        }
+                                        isFullScreen = !isFullScreen
                                         haptic.tick()
                                     }
                                     .padding(pageInnerPadding)
@@ -454,6 +518,25 @@ fun QuranScreen(
                                         Spacer(modifier = Modifier.height(8.dp))
                                     }
 
+                                    // تجميع آيات الصفحة في كتلة نصية متراصة واحدة (Continuous Flow Block)
+                                    val pageContinuousText = remember(
+                                        ayahsOfPage,
+                                        isTajweedEnabled,
+                                        pageTextColor,
+                                        goldAccent,
+                                        isHifzModeActive,
+                                        unmaskedWordKeys
+                                    ) {
+                                        MushafPageLayoutHelper.buildPageAnnotatedString(
+                                            ayahs = ayahsOfPage,
+                                            isTajweedEnabled = isTajweedEnabled,
+                                            textColor = pageTextColor,
+                                            goldSeparatorColor = goldAccent,
+                                            isHifzMode = isHifzModeActive,
+                                            unmaskedWordKeys = unmaskedWordKeys
+                                        )
+                                    }
+
                                     // فحص إذا كانت بداية سورة جديدة في الصفحة
                                     val newSurahAyah = ayahsOfPage.firstOrNull { it.numberInSurah == 1 }
                                     if (newSurahAyah != null) {
@@ -487,25 +570,6 @@ fun QuranScreen(
                                         }
                                     }
 
-                                    // تجميع آيات الصفحة في كتلة نصية متراصة واحدة (Continuous Flow Block)
-                                    val pageContinuousText = remember(
-                                        ayahsOfPage,
-                                        isTajweedEnabled,
-                                        pageTextColor,
-                                        goldAccent,
-                                        isHifzModeActive,
-                                        unmaskedWordKeys
-                                    ) {
-                                        MushafPageLayoutHelper.buildPageAnnotatedString(
-                                            ayahs = ayahsOfPage,
-                                            isTajweedEnabled = isTajweedEnabled,
-                                            textColor = pageTextColor,
-                                            goldSeparatorColor = goldAccent,
-                                            isHifzMode = isHifzModeActive,
-                                            unmaskedWordKeys = unmaskedWordKeys
-                                        )
-                                    }
-
                                     @OptIn(ExperimentalFoundationApi::class)
                                     Surface(
                                         modifier = Modifier
@@ -520,8 +584,8 @@ fun QuranScreen(
                                                         }
                                                         unmaskedWordKeys = newKeys
                                                         haptic.tick()
-                                                    } else if (isFullScreen) {
-                                                        showFullScreenExitBar = !showFullScreenExitBar
+                                                    } else {
+                                                        isFullScreen = !isFullScreen
                                                         haptic.tick()
                                                     }
                                                 },
@@ -569,48 +633,26 @@ fun QuranScreen(
                     }
                 }
 
-                // شريط علوي شفاف للخروج من ملء الشاشة يظهر بالنقر ولا يحجب آيات الزوايا
-                AnimatedVisibility(
-                    visible = isFullScreen && showFullScreenExitBar,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.TopCenter)
-                ) {
-                    Surface(
+                // زر عائم شبه شفاف في الأسفل للخروج من ملء الشاشة بدون أي تداخل مع ترويسة الجزء
+                if (isFullScreen) {
+                    IconButton(
+                        onClick = {
+                            isFullScreen = false
+                            haptic.tick()
+                        },
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        color = Color.Black.copy(alpha = 0.75f),
-                        shape = RoundedCornerShape(14.dp)
+                            .align(Alignment.BottomEnd)
+                            .padding(bottom = 24.dp, end = 20.dp)
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.55f))
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "المصحف الشريف • ملء الشاشة",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-
-                            Button(
-                                onClick = {
-                                    isFullScreen = false
-                                    showFullScreenExitBar = false
-                                    haptic.tick()
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = goldAccent),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                            ) {
-                                Icon(Icons.Default.FullscreenExit, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("إنهاء ملء الشاشة", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
+                        Icon(
+                            imageVector = Icons.Default.FullscreenExit,
+                            contentDescription = "الخروج من ملء الشاشة",
+                            tint = goldAccent,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }
@@ -624,8 +666,8 @@ fun QuranScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = "المصحف الشريف والتلاوات",
-                            style = MaterialTheme.typography.titleMedium,
+                            text = "المصحف الشريف",
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = emeraldPrimary
                         )
@@ -633,12 +675,12 @@ fun QuranScreen(
                     actions = {
                         Button(
                             onClick = viewModel::togglePageMode,
-                            colors = ButtonDefaults.buttonColors(containerColor = goldAccent),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = emeraldPrimary),
+                            modifier = Modifier.padding(end = 8.dp)
                         ) {
-                            Icon(Icons.Default.AutoStories, contentDescription = null, tint = emeraldPrimary, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.AutoStories, contentDescription = null, tint = goldAccent, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("فتح المصحف (٦٠٤ ص)", color = emeraldPrimary, fontWeight = FontWeight.Bold)
+                            Text("المصحف (٦٠٤ ص)")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -646,157 +688,403 @@ fun QuranScreen(
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { innerPadding ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                // بطاقة آخر موضع قراءة (Bookmark Hero Card)
-                item(key = "quran_bookmark_card") {
-                    BookmarkHeroCard(
-                        bookmark = uiState.bookmark,
-                        onContinueReading = {
-                            if (uiState.bookmark != null) {
-                                viewModel.jumpToPage(uiState.bookmark!!.pageNumber)
-                            } else {
-                                viewModel.jumpToPage(1)
-                            }
-                        }
-                    )
+            if (uiState.isLoading) {
+                Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = emeraldPrimary)
                 }
-
-                // شريط اختيار الشيخ القارئ للتلاوة الصوتية
-                item(key = "quran_reciter_selector") {
-                    ReciterSelectorBar(
-                        selectedReciterId = uiState.selectedSheikhId,
-                        onSelectReciter = viewModel::selectSheikh
-                    )
-                }
-
-                // مشغل التلاوة الصوتي الحي عند تشغيل سورة
-                if (isPlayingAudio && currentlyPlayingSurah != null) {
-                    item(key = "quran_active_audio_player") {
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // بطاقة الدخول لمصحف تدبر وعمل
+                    item(key = "page_mushaf_banner") {
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = emeraldPrimary),
-                            shape = MaterialTheme.shapes.medium
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.large)
+                                .clickable { viewModel.openPage(1) },
+                            shape = MaterialTheme.shapes.large,
+                            colors = CardDefaults.cardColors(containerColor = emeraldPrimary)
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(14.dp),
+                                    .padding(18.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
-                                        color = goldAccent,
-                                        strokeWidth = 2.dp
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "مصحف تدبر وعمل (٦٠٤ صفحة)",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
                                     )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Column {
-                                        Text(
-                                            text = currentAudioTitle ?: "تلاوة خاشعة",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White
-                                        )
-                                        Text(
-                                            text = "جاري الاستماع الآن...",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = goldAccent
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "تصفح صفحات مصحف المدينة المنورة أوفلاين مع وقفات التدبر والعمل",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White.copy(alpha = 0.85f)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Default.AutoStories,
+                                    contentDescription = null,
+                                    tint = goldAccent,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // بطاقة اختيار القارئ وتنزيل التلاوات
+                    item(key = "sheikh_reciter_selector") {
+                        Card(
+                            shape = MaterialTheme.shapes.medium,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text(
+                                    text = "اختر القارئ لتلاوة القرآن (أونلاين وتحميل أوفلاين):",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(QuranSheikhManager.RECITERS) { sheikh ->
+                                        val isSelected = (sheikh.id == uiState.selectedSheikhId)
+                                        FilterChip(
+                                            selected = isSelected,
+                                            onClick = {
+                                                viewModel.setSelectedSheikh(sheikh.id)
+                                                viewModel.checkDownloadedSurahs(context)
+                                            },
+                                            label = { Text(sheikh.nameAr, style = MaterialTheme.typography.labelSmall) },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = goldAccent.copy(alpha = 0.2f),
+                                                selectedLabelColor = goldAccent
+                                            )
                                         )
                                     }
-                                }
-
-                                IconButton(onClick = { sheikhPlayer.stop() }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "إيقاف",
-                                        tint = Color.White
-                                    )
                                 }
                             }
                         }
                     }
-                }
 
-                // شريط البحث في السور
-                item(key = "quran_search_field") {
-                    OutlinedTextField(
-                        value = uiState.searchQuery,
-                        onValueChange = viewModel::onSearchQueryChanged,
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("ابحث عن سورة بالاسم أو الرقم...") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Search, contentDescription = "بحث", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        },
-                        trailingIcon = {
-                            if (uiState.searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
-                                    Icon(Icons.Default.Close, contentDescription = "مسح", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // بطاقة آخر موضع قراءة
+                    if (uiState.lastBookmark != null) {
+                        item(key = "bookmark_card") {
+                            BookmarkHeroCard(
+                                bookmark = uiState.lastBookmark!!,
+                                onClick = {
+                                    viewModel.openPage(1)
                                 }
+                            )
+                        }
+                    }
+
+                    // بطاقة خطة الختمة
+                    item(key = "khatmah_card") {
+                        KhatmahPlanCard(
+                            plan = uiState.khatmahPlan,
+                            onPlanClick = {
+                                val newDays = if (uiState.khatmahPlan.totalDays == 30) 15 else 30
+                                viewModel.updateKhatmahPlan(newDays)
+                                haptic.tick()
                             }
-                        },
-                        shape = MaterialTheme.shapes.medium,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = goldAccent,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                         )
-                    )
-                }
+                    }
 
-                // عنوان قائمة السور
-                item(key = "surahs_header") {
-                    Text(
-                        text = "سور القرآن الكريم (${uiState.surahs.size} سورة):",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
+                    // شريط البحث في السور
+                    item(key = "search_surah_bar") {
+                        OutlinedTextField(
+                            value = uiState.searchQuery,
+                            onValueChange = viewModel::onSearchQueryChanged,
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("ابحث عن سورة بالاسم أو الرقم...") },
+                            leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
+                            trailingIcon = {
+                                if (uiState.searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                                        Icon(imageVector = Icons.Default.Close, contentDescription = null)
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = MaterialTheme.shapes.medium,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = goldAccent,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        )
+                    }
 
-                // قائمة السور
-                items(uiState.surahs, key = { it.number }) { surah ->
-                    val isSurahDownloaded = QuranAudioDownloader.isSurahDownloaded(
-                        context = context,
-                        sheikhId = uiState.selectedSheikhId,
-                        surahNumber = surah.number
-                    )
-
-                    SurahItemCard(
-                        surah = surah,
-                        isSelected = (currentlyPlayingSurah == surah.number),
-                        isDownloaded = isSurahDownloaded,
-                        onSurahClick = {
-                            viewModel.jumpToPage(surah.pageStart)
-                            haptic.tick()
-                        },
-                        onPlayAudio = {
-                            if (isPlayingAudio && currentlyPlayingSurah == surah.number) {
-                                sheikhPlayer.pause()
-                            } else {
-                                sheikhPlayer.playSurah(
-                                    sheikhId = uiState.selectedSheikhId,
-                                    surahNumber = surah.number,
-                                    surahName = surah.nameArabic
-                                )
-                            }
-                            haptic.tick()
-                        },
-                        onDownloadClick = {
-                            scope.launch {
-                                QuranAudioDownloader.downloadSurah(
-                                    context = context,
-                                    sheikhId = uiState.selectedSheikhId,
-                                    surahNumber = surah.number
+                    // شريط التصفية والتبويب الموحد للمصحف
+                    item(key = "filter_tabs_row") {
+                        val filterTabs = listOf(
+                            "ALL" to "الكل",
+                            "MECCAN" to "مكية",
+                            "MEDINAN" to "مدنية",
+                            "DOWNLOADED" to "المحمّلة أوفلاين",
+                            "JUZ" to "الأجزاء الـ ٣٠"
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(filterTabs) { (key, label) ->
+                                val isSelected = (uiState.selectedFilterTab == key)
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { viewModel.setFilterTab(key) },
+                                    label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = emeraldPrimary,
+                                        selectedLabelColor = Color.White
+                                    )
                                 )
                             }
                         }
-                    )
+                    }
+
+                    if (uiState.selectedFilterTab == "JUZ") {
+                        // عرض فهرس الأجزاء الـ 30
+                        item(key = "juz_header") {
+                            Text(
+                                text = "فهرس الأجزاء (٣٠ جزءاً)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+
+                        items(
+                            items = uiState.juzList,
+                            key = { "juz_${it.number}" }
+                        ) { juz ->
+                            Card(
+                                shape = MaterialTheme.shapes.medium,
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .clickable {
+                                        viewModel.openPage(juz.startPage)
+                                        haptic.tick()
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(38.dp)
+                                                .clip(CircleShape)
+                                                .background(goldAccent.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = toArabicDigits(juz.number),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = goldAccent
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = juz.name,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "يبدأ من ${juz.startSurahName}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(MaterialTheme.shapes.extraSmall)
+                                            .background(emeraldPrimary.copy(alpha = 0.08f))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "صفحة ${toArabicDigits(juz.startPage)}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = emeraldPrimary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // عنوان قائمة السور
+                        item(key = "index_header") {
+                            Text(
+                                text = "فهرس السور (${toArabicDigits(uiState.filteredSurahs.size)} سورة)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+
+                        // قائمة السور الـ 114 مع أزرار الاستماع المنفصلة والتحميل أوفلاين
+                        items(
+                            items = uiState.filteredSurahs,
+                            key = { it.number }
+                        ) { surah ->
+                            val isDownloaded = uiState.downloadedSurahs.contains(surah.number)
+                            val isDownloading = (uiState.downloadingSurahNumber == surah.number)
+                            val isThisSurahPlaying = (isAudioPlaying && currentlyPlayingSurah == surah.number)
+                            val isThisSurahBuffering = (isBuffering && currentlyPlayingSurah == surah.number)
+
+                            Card(
+                                shape = MaterialTheme.shapes.medium,
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable {
+                                                viewModel.openPage(surah.startPage)
+                                                haptic.tick()
+                                            }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(goldAccent.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = toArabicDigits(surah.number),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = goldAccent
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = surah.name,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = "${surah.revelationType} • ${toArabicDigits(surah.numberOfAyahs)} آية",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "• ص ${toArabicDigits(surah.startPage)}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = goldAccent,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        // زر تشغيل التلاوة المخصص لهذه السورة فقط
+                                        IconButton(
+                                            onClick = {
+                                                if (isThisSurahPlaying) {
+                                                    sheikhPlayer.stop()
+                                                } else {
+                                                    sheikhPlayer.playSurah(uiState.selectedSheikhId, surah.number, surah.name)
+                                                }
+                                            }
+                                        ) {
+                                            if (isThisSurahBuffering) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(20.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = emeraldPrimary
+                                                )
+                                            } else {
+                                                Icon(
+                                                    imageVector = if (isThisSurahPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                    contentDescription = "استماع",
+                                                    tint = if (isThisSurahPlaying) goldAccent else emeraldPrimary
+                                                )
+                                            }
+                                        }
+
+                                        // زر التحميل أوفلاين
+                                        if (isDownloaded) {
+                                            IconButton(
+                                                onClick = {
+                                                    viewModel.deleteDownloadedSurah(context, surah.number)
+                                                    haptic.tick()
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CheckCircle,
+                                                    contentDescription = "محمّل أوفلاين - انقر للحذف",
+                                                    tint = emeraldPrimary,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        } else if (isDownloading) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                CircularProgressIndicator(
+                                                    progress = { uiState.downloadProgress },
+                                                    modifier = Modifier.size(24.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = goldAccent
+                                                )
+                                            }
+                                        } else {
+                                            IconButton(
+                                                onClick = {
+                                                    viewModel.downloadSurah(context, surah.number)
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Download,
+                                                    contentDescription = "تحميل للاستماع أوفلاين",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    item(key = "quran_bottom_spacer") {
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
                 }
             }
         }

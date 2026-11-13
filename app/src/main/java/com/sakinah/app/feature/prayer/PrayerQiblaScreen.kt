@@ -74,6 +74,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sakinah.app.core.utils.audio.SheikhAudioPlayer
+import com.sakinah.app.core.utils.rememberHapticFeedback
 import com.sakinah.app.feature.prayer.components.MuezzinSelectionCard
 import kotlin.math.abs
 import kotlin.math.cos

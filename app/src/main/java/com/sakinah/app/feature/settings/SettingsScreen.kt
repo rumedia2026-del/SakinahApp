@@ -91,6 +91,7 @@ import com.sakinah.app.R
 import com.sakinah.app.core.ui.theme.SakinahThemeMode
 import com.sakinah.app.core.utils.BackupRestoreHelper
 import com.sakinah.app.core.utils.BatteryOptimizationHelper
+import com.sakinah.app.core.utils.rememberHapticFeedback
 import com.sakinah.app.core.utils.audio.SheikhAudioPlayer
 import com.sakinah.app.feature.prayer.components.MuezzinSelectionCard
 import com.sakinah.app.data.repository.AzkarRepository
