@@ -1,5 +1,6 @@
 package com.sakinah.app
 
+import androidx.compose.ui.graphics.Color
 import com.sakinah.app.feature.quran.QuranThemeManager
 import com.sakinah.app.feature.social.SocialMediaReminderManager
 import org.junit.Assert.assertEquals
@@ -14,8 +15,9 @@ class SocialMediaAndQuranUnitTest {
         val darkTheme = QuranThemeManager.getTheme(5)
         assertNotNull(darkTheme)
         assertEquals("الوضع المظلم الملكي", darkTheme.nameAr)
-        // Background color should be #121417 (0xFF121417)
-        assertEquals(0xFF121417.toLong(), darkTheme.backgroundColor.value.toLong() shr 32 or (darkTheme.backgroundColor.value.toLong() and 0xFFFFFFFFL))
+        assertEquals(Color(0xFF121417), darkTheme.backgroundColor)
+        assertEquals(Color(0xFFF5F0E6), darkTheme.textColor)
+        assertEquals(Color(0xFFFCD34D), darkTheme.accentColor)
     }
 
     @Test

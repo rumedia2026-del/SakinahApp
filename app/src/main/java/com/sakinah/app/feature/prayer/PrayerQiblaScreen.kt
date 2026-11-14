@@ -47,6 +47,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CompassCalibration
 import androidx.compose.material.icons.filled.Explore
@@ -159,12 +160,12 @@ fun PrayerQiblaScreen(
 
     // حساب زاوية القبلة الكروية من الموقع
     val qiblaBearing = remember(selectedCity) {
-        QiblaCalculator.calculateBearing(selectedCity.latitude, selectedCity.longitude)
+        QiblaCalculator.calculateBearing(selectedCity.coordinates.latitude, selectedCity.coordinates.longitude)
     }
 
     // تصحيح الانحراف المغناطيسي للحصول على True Azimuth
     val trueHeading = remember(rawHeading, selectedCity) {
-        QiblaCalculator.calculateTrueAzimuth(rawHeading, selectedCity.latitude, selectedCity.longitude)
+        QiblaCalculator.calculateTrueAzimuth(rawHeading, selectedCity.coordinates.latitude, selectedCity.coordinates.longitude)
     }
 
     // تنعيم حركة المؤشر
@@ -184,7 +185,7 @@ fun PrayerQiblaScreen(
     var wasFacingQibla by remember { mutableStateOf(false) }
     LaunchedEffect(isFacingQibla) {
         if (isFacingQibla && !wasFacingQibla) {
-            haptic.heavy()
+            haptic.completion()
         }
         wasFacingQibla = isFacingQibla
     }
