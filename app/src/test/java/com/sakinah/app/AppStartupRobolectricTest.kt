@@ -3,7 +3,6 @@ package com.sakinah.app
 import android.app.NotificationManager
 import android.content.Context
 import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
 import com.sakinah.app.data.local.db.SakinahDatabase
 import com.sakinah.app.feature.fiqh.FiqhDataLoader
 import com.sakinah.app.feature.prayer.AdhanAlarmScheduler
@@ -12,15 +11,18 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class AppStartupRobolectricTest {
 
+    private fun getContext(): Context = RuntimeEnvironment.getApplication()
+
     @Test
     fun testContextAndApplicationStartup() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
+        val context = getContext()
         assertNotNull("Application context must not be null", context)
 
         // Notification channels should be creatable without crash
@@ -30,7 +32,7 @@ class AppStartupRobolectricTest {
 
     @Test
     fun testAdhanAlarmSchedulerSafeExecutionWithoutSecurityCrash() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
+        val context = getContext()
         // AdhanAlarmScheduler must execute safely without throwing unhandled SecurityException
         var error: Throwable? = null
         try {
@@ -43,7 +45,7 @@ class AppStartupRobolectricTest {
 
     @Test
     fun testRoomDatabaseSchemaAndMigrations() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
+        val context = getContext()
 
         // Test in-memory database with production migrations
         val db = Room.inMemoryDatabaseBuilder(context, SakinahDatabase::class.java)
@@ -64,7 +66,7 @@ class AppStartupRobolectricTest {
 
     @Test
     fun testRawFiqhGuideGracefulLoad() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
+        val context = getContext()
         val chapters = FiqhDataLoader.loadFiqhGuide(context)
         assertNotNull("Fiqh chapters list must not be null", chapters)
         assertTrue("Fiqh guide chapters should be parsed successfully", chapters.isNotEmpty())
