@@ -112,6 +112,7 @@ enum class QiblaDisplayMode {
 fun PrayerQiblaScreen(
     onNavigateBack: () -> Unit,
     onOpenAdhanSettings: () -> Unit = {},
+    onOpenFiqhGuide: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -453,6 +454,60 @@ fun PrayerQiblaScreen(
                                     contentDescription = "فتح الإعدادات",
                                     tint = emeraldPrimary,
                                     modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // بطاقة دليل الفقه العملي الميسر
+                    item(key = "fiqh_guide_shortcut") {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.large)
+                                .clickable { onOpenFiqhGuide() },
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, goldAccent.copy(alpha = 0.4f))
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(goldAccent.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(text = "⚖️", fontSize = 16.sp)
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "دليل الفقه العملي الميسر 📖",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "أحكام سجود السهو، صلاة المسافر، والمسبوق في الصلاة (أوفلاين)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "فتح الفقه الميسر",
+                                    tint = goldAccent,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }

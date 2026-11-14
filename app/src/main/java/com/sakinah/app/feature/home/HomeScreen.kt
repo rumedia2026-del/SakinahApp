@@ -84,6 +84,9 @@ fun HomeScreen(
         onPrayerTimesClick = {
             navController.navigate(Screen.PrayerTimes.route)
         },
+        onFiqhGuideClick = {
+            navController.navigate(Screen.FiqhGuide.route)
+        },
         onQuranNav = {
             navController.navigate(Screen.Quran.route)
         },
@@ -102,6 +105,7 @@ fun HomeContent(
     onCategoryClick: (Int) -> Unit,
     onSettingsClick: () -> Unit,
     onPrayerTimesClick: () -> Unit = {},
+    onFiqhGuideClick: () -> Unit = {},
     onQuranNav: () -> Unit = {},
     onTasbihNav: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -179,6 +183,57 @@ fun HomeContent(
                 // كرت سُنة مهجورة كل يوم
                 item(key = "daily_sunnah_card") {
                     DailySunnahCard()
+                }
+
+                // كرت دليل الفقه العملي الميسر
+                item(key = "fiqh_guide_card") {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.large)
+                            .clickable { onFiqhGuideClick() },
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, goldAccent.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(goldAccent.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(text = "⚖️", fontSize = 20.sp)
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "دليل الفقه العملي الميسر 📖",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "سجود السهو • صلاة المسافر • أحكام المسبوق والطهارة (100% أوفلاين)",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = null,
+                                tint = goldAccent,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
 
                 // 2. حلقات العبادة اليومية الثلاث (أذكار، قرآن، تسبيح)
