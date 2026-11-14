@@ -25,9 +25,9 @@ class QiblaCalculatorUnitTest {
 
     @Test
     fun testRashidQiblaBearing() {
-        // Rashid (Egypt): 31.4033, 30.4170 -> expected ~135°
+        // Rashid (Egypt): 31.4033, 30.4170 -> exact Great-Circle bearing is 137.62°
         val bearing = QiblaCalculator.calculateBearing(31.4033, 30.4170)
-        assertTrue("Rashid bearing should be approx 135° (+-2°), was: $bearing", abs(bearing - 135.5f) < 2.0f)
+        assertTrue("Rashid bearing should be approx 137.6° (+-1.5°), was: $bearing", abs(bearing - 137.6f) < 1.5f)
     }
 
     @Test
