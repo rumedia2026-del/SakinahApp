@@ -3,6 +3,7 @@ package com.sakinah.app
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
 import android.os.Build
 import androidx.work.Configuration
 import com.sakinah.app.core.notifications.NotificationScheduler
@@ -39,6 +40,9 @@ class SakinahApplication : Application(), Configuration.Provider {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
 
+            // حذف القناة القديمة لضمان تطبيق الإعدادات العاجلة الجديدة
+            manager.deleteNotificationChannel("sakinah_adhan_channel")
+
             val azkarChannel = NotificationChannel(
                 CHANNEL_ID_AZKAR,
                 getString(R.string.notif_channel_azkar),
@@ -60,15 +64,22 @@ class SakinahApplication : Application(), Configuration.Provider {
                 setShowBadge(false)
             }
 
+            // القناة العاجلة الجديدة للأذان بدون صوت النظام لأن الصوت يشغل عبر الخدمة
             val adhanChannel = NotificationChannel(
-                CHANNEL_ID_ADHAN,
-                "أذان الصلاة الشريف",
+                CHANNEL_ID_ADHAN_URGENT,
+                "أذان الصلاة العاجل",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "صوت الأذان والتكبيرات عند دخول وقت الفريضة"
+                description = "تنبيه الأذان ودخول وقت الفريضة بدقة فوق شاشة القفل"
+                setSound(null, null)
                 enableVibration(true)
                 setShowBadge(true)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                // تجاوز وضع عدم الإزعاج
+                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                if (notificationManager?.isNotificationPolicyAccessGranted == true) {
+                    setBypassDnd(true)
+                }
             }
 
             val preAdhanChannel = NotificationChannel(
@@ -100,7 +111,7 @@ class SakinahApplication : Application(), Configuration.Provider {
     companion object {
         const val CHANNEL_ID_AZKAR         = "sakinah_azkar_reminders"
         const val CHANNEL_ID_FLOATING_ZIKR = "sakinah_floating_zikr"
-        const val CHANNEL_ID_ADHAN         = "sakinah_adhan_channel"
+        const val CHANNEL_ID_ADHAN_URGENT  = "sakinah_adhan_urgent_v4"
         const val CHANNEL_ID_PRE_ADHAN     = "sakinah_pre_adhan_channel"
         const val CHANNEL_ID_SOCIAL        = "sakinah_social_reminder_channel"
     }

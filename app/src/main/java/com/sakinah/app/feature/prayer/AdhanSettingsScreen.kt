@@ -1,7 +1,12 @@
 package com.sakinah.app.feature.prayer
 
+import android.app.NotificationManager
 import android.content.Context
-import android.media.AudioManager
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,12 +27,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +47,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -59,6 +72,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sakinah.app.core.utils.rememberHapticFeedback
 
@@ -71,7 +85,9 @@ fun AdhanSettingsScreen(
     val context = LocalContext.current
     val haptic = rememberHapticFeedback()
     val prefs = remember { context.getSharedPreferences("sakinah_prayer_prefs", Context.MODE_PRIVATE) }
-    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
+    val notificationManager = remember { context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager }
+    val powerManager = remember { context.getSystemService(Context.POWER_SERVICE) as PowerManager }
 
     val playingMuezzinId by viewModel.playingMuezzinId.collectAsState()
     val isMusicVolumeMuted by viewModel.isMusicVolumeMuted.collectAsState()
@@ -114,9 +130,37 @@ fun AdhanSettingsScreen(
         mutableStateOf(prefs.getBoolean(AdhanAlarmScheduler.KEY_MOSQUE_SILENT, false))
     }
 
-    val maxAlarmVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM).toFloat() }
+    // فحص الصلاحيات الدقيقة
+    var hasPostNotificationPermission by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            } else true
+        )
+    }
+    var canUseFullScreenIntent by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                notificationManager.canUseFullScreenIntent()
+            } else true
+        )
+    }
+    var hasDndBypassPermission by remember {
+        mutableStateOf(notificationManager.isNotificationPolicyAccessGranted)
+    }
+    var isIgnoringBatteryOptimizations by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                powerManager.isIgnoringBatteryOptimizations(context.packageName)
+            } else true
+        )
+    }
+
+    var testAdhanScheduled by remember { mutableStateOf(false) }
+
+    val maxAlarmVolume = remember { audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM).toFloat() }
     var currentAlarmVolume by remember {
-        mutableFloatStateOf(audioManager.getStreamVolume(AudioManager.STREAM_ALARM).toFloat())
+        mutableFloatStateOf(audioManager.getStreamVolume(android.media.AudioManager.STREAM_ALARM).toFloat())
     }
 
     val emeraldPrimary = Color(0xFF0F3D2E)
@@ -174,6 +218,134 @@ fun AdhanSettingsScreen(
         ) {
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
+            // ═══════════════════════════════════════════════════════════════════
+            // بطاقة فحص صلاحيات الأذان الموثوق فوق القفل
+            // ═══════════════════════════════════════════════════════════════════
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, goldAccent.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Security, contentDescription = null, tint = goldAccent)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "فحص جاهزية التنبيه فوق شاشة القفل",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = emeraldPrimary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // 1. إذن الإشعارات
+                        PermissionCheckRow(
+                            title = "صلاحية الإشعارات (Notifications)",
+                            isGranted = hasPostNotificationPermission,
+                            onFix = {
+                                val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                }
+                                context.startActivity(intent)
+                            }
+                        )
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        // 2. إذن الشاشة الكاملة فوق القفل (Android 14+)
+                        PermissionCheckRow(
+                            title = "الظهور فوق شاشة القفل (Full-Screen Intent)",
+                            isGranted = canUseFullScreenIntent,
+                            onFix = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                                    val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                                        data = Uri.parse("package:${context.packageName}")
+                                    }
+                                    context.startActivity(intent)
+                                }
+                            }
+                        )
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        // 3. تجاوز وضع عدم الإزعاج
+                        PermissionCheckRow(
+                            title = "تجاوز وضع عدم الإزعاج (DND Policy)",
+                            isGranted = hasDndBypassPermission,
+                            onFix = {
+                                val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                                context.startActivity(intent)
+                            }
+                        )
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        // 4. استثناء تحسين البطارية
+                        PermissionCheckRow(
+                            title = "استثناء البطارية من الإيقاف (Battery Optimization)",
+                            isGranted = isIgnoringBatteryOptimizations,
+                            onFix = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                        data = Uri.parse("package:${context.packageName}")
+                                    }
+                                    context.startActivity(intent)
+                                }
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // إرشاد نصي لأجهزة Honor و Huawei و Xiaomi
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = emeraldPrimary.copy(alpha = 0.06f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Info, contentDescription = null, tint = emeraldPrimary, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "لمستخدمي Honor / Huawei / Xiaomi: يرجى تفعيل (التشغيل التلقائي) والسماح بالعمل في الخلفية من إدارة التطبيقات لضمان رفع الأذان دائماً.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // زر اختبار الأذان الفعلي بعد 10 ثوانٍ
+                        Button(
+                            onClick = {
+                                AdhanAlarmScheduler.scheduleTestAdhan(context, delaySeconds = 10, muezzinId = selectedMuezzinId)
+                                testAdhanScheduled = true
+                                haptic.completion()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = emeraldPrimary),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = goldAccent)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (testAdhanScheduled) "تمت الجدولة! اغلق شاشتك وجرّب الآن (خلال 10 ثوانٍ)" else "🔔 اختبار الأذان الفعلي بعد 10 ثوانٍ",
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+
             // تنبيه إذا كان صوت وسائط الهاتف مكتوماً
             if (isMusicVolumeMuted) {
                 item {
@@ -225,7 +397,7 @@ fun AdhanSettingsScreen(
                                 color = emeraldPrimary
                             )
                             Text(
-                                text = "أذان كامل بصوت المؤذن في الوقت الدقيق دون تأخير",
+                                text = "أذان كامل بصوت المؤذن في الوقت الدقيق دون تأخير عبر منبه النظام",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -450,7 +622,7 @@ fun AdhanSettingsScreen(
                             value = currentAlarmVolume,
                             onValueChange = { newVol ->
                                 currentAlarmVolume = newVol
-                                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, newVol.toInt(), 0)
+                                audioManager.setStreamVolume(android.media.AudioManager.STREAM_ALARM, newVol.toInt(), 0)
                             },
                             valueRange = 0f..maxAlarmVolume,
                             modifier = Modifier.padding(top = 4.dp)
@@ -620,6 +792,48 @@ fun AdhanSettingsScreen(
             }
 
             item { Spacer(modifier = Modifier.height(24.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun PermissionCheckRow(
+    title: String,
+    isGranted: Boolean,
+    onFix: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (isGranted) Icons.Default.Check else Icons.Default.Close,
+                contentDescription = null,
+                tint = if (isGranted) Color(0xFF2E7D32) else Color(0xFFC62828),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = if (isGranted) MaterialTheme.colorScheme.onSurface else Color(0xFFC62828)
+            )
+        }
+
+        if (!isGranted) {
+            OutlinedButton(
+                onClick = onFix,
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 2.dp)
+            ) {
+                Text("إصلاح", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

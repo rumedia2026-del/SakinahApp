@@ -39,7 +39,7 @@ data class MonthlyPrayerDay(
 )
 
 data class PrayerScheduleState(
-    val cityName: String = "رشيد - البحيرة",
+    val cityName: String = "القاهرة",
     val countryName: String = "مصر",
     val hijriDateFormatted: String = "",
     val gregorianDateFormatted: String = "",
@@ -52,8 +52,8 @@ data class PrayerScheduleState(
 object PrayerTimesHelper {
 
     val SUPPORTED_CITIES = listOf(
-        CityLocation("رشيد - البحيرة", "مصر", Coordinates(31.4045, 30.4164), CalculationMethod.EGYPTIAN),
         CityLocation("القاهرة", "مصر", Coordinates(30.0444, 31.2357), CalculationMethod.EGYPTIAN),
+        CityLocation("رشيد - البحيرة", "مصر", Coordinates(31.4033, 30.4170), CalculationMethod.EGYPTIAN),
         CityLocation("الإسكندرية", "مصر", Coordinates(31.2001, 29.9187), CalculationMethod.EGYPTIAN),
         CityLocation("الجيزة", "مصر", Coordinates(30.0131, 31.2089), CalculationMethod.EGYPTIAN),
         CityLocation("مكة المكرمة", "السعودية", Coordinates(21.4225, 39.8262), CalculationMethod.UMM_AL_QURA),
