@@ -24,6 +24,7 @@ json = "20231013"
 adhan = "1.2.1"
 media3 = "1.5.0"
 camerax = "1.4.1"
+robolectric = "4.14.1"
 
 [libraries]
 # AndroidX Core
@@ -101,6 +102,7 @@ org-json = { group = "org.json", name = "json", version.ref = "json" }
 # Testing
 junit = { group = "junit", name = "junit", version = "4.13.2" }
 androidx-test-ext = { group = "androidx.test.ext", name = "junit", version = "1.2.1" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 

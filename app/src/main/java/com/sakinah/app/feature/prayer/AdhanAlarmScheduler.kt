@@ -7,6 +7,7 @@ import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
 import android.os.Build
+import android.util.Log
 import com.batoulapps.adhan.Coordinates
 import com.batoulapps.adhan.Madhab
 import com.batoulapps.adhan.Prayer
@@ -166,7 +167,13 @@ object AdhanAlarmScheduler {
         )
 
         val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerAtMillis, showPendingIntent)
-        alarmManager.setAlarmClock(alarmClockInfo, operation)
+        try {
+            alarmManager.setAlarmClock(alarmClockInfo, operation)
+        } catch (e: SecurityException) {
+            Log.e("AdhanAlarmScheduler", "Exact alarm permission SCHEDULE_EXACT_ALARM not granted to schedule alarm clock at $triggerAtMillis", e)
+        } catch (e: Exception) {
+            Log.e("AdhanAlarmScheduler", "Failed to schedule exact alarm clock at $triggerAtMillis", e)
+        }
     }
 
     private fun getEffectiveCoordinatesAndMethod(

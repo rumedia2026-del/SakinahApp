@@ -1,9 +1,11 @@
 package com.sakinah.app.data.local.db
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sakinah.app.R
 import com.sakinah.app.data.local.db.dao.CategoryDao
@@ -44,6 +46,26 @@ abstract class SakinahDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: SakinahDatabase? = null
 
+        val MIGRATIONS: Array<Migration> = (1..9).map { startVersion ->
+            object : Migration(startVersion, 10) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS `munajat` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `title` TEXT NOT NULL,
+                            `content` TEXT NOT NULL,
+                            `emotionTag` TEXT,
+                            `isAnswered` INTEGER NOT NULL,
+                            `createdAt` INTEGER NOT NULL,
+                            `answeredAt` INTEGER
+                        )
+                        """.trimIndent()
+                    )
+                }
+            }
+        }.toTypedArray()
+
         fun getInstance(context: Context, scope: CoroutineScope): SakinahDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -51,6 +73,7 @@ abstract class SakinahDatabase : RoomDatabase() {
                     SakinahDatabase::class.java,
                     DATABASE_NAME
                 )
+                    .addMigrations(*MIGRATIONS)
                     .addCallback(SakinahDatabaseCallback(context.applicationContext, scope))
                     .build()
                 INSTANCE = instance
@@ -147,7 +170,7 @@ abstract class SakinahDatabase : RoomDatabase() {
                 database.zikrDao().insertAzkar(azkar)
 
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("SakinahDatabase", "Failed to populate initial data from azkar_seed", e)
             }
         }
     }

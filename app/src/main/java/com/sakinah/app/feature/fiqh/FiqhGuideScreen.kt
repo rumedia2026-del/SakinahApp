@@ -152,7 +152,7 @@ object FiqhDataLoader {
                 )
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("FiqhDataLoader", "Failed to parse fiqh_guide.json", e)
         }
         return list
     }

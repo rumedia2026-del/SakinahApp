@@ -5,9 +5,14 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.work.Configuration
 import com.sakinah.app.core.notifications.NotificationScheduler
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 // ═══════════════════════════════════════════════════════════════════
@@ -32,8 +37,14 @@ class SakinahApplication : Application(), Configuration.Provider {
         createNotificationChannels()
         // جدولة التنبيهات اليومية الذكية
         NotificationScheduler.scheduleDailyReminders(this)
-        // جدولة الأذان والصلوات بدقة AlarmManager
-        com.sakinah.app.feature.prayer.AdhanAlarmScheduler.scheduleAllPrayers(this)
+        // جدولة الأذان والصلوات بدقة AlarmManager بأمان بعد التهيئة بشكل غير متزامن
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                com.sakinah.app.feature.prayer.AdhanAlarmScheduler.scheduleAllPrayers(this@SakinahApplication)
+            } catch (e: Exception) {
+                Log.e("SakinahApplication", "Failed to schedule prayers safely on startup", e)
+            }
+        }
     }
 
     private fun createNotificationChannels() {
