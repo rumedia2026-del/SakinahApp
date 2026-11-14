@@ -23,6 +23,7 @@ play-services-location = "21.3.0"
 json = "20231013"
 adhan = "1.2.1"
 media3 = "1.5.0"
+camerax = "1.4.1"
 
 [libraries]
 # AndroidX Core
@@ -81,6 +82,11 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 
 # Location
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "play-services-location" }
+
+# CameraX
+androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
+androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
+androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 
 # Adhan (Offline Prayer Times)
 adhan = { group = "com.batoulapps.adhan", name = "adhan", version.ref = "adhan" }

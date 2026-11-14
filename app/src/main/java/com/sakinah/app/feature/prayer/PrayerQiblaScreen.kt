@@ -1,13 +1,29 @@
 package com.sakinah.app.feature.prayer
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,23 +37,28 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CompassCalibration
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -65,20 +86,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.sakinah.app.core.utils.audio.SheikhAudioPlayer
 import com.sakinah.app.core.utils.rememberHapticFeedback
-import com.sakinah.app.feature.prayer.components.MuezzinSelectionCard
 import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.sin
+import kotlin.math.roundToInt
+
+enum class QiblaDisplayMode {
+    COMPASS_2D,
+    CAMERA_AR
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,12 +115,14 @@ fun PrayerQiblaScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val haptic = rememberHapticFeedback()
+
     val emeraldPrimary = Color(0xFF0F3D2E)
     val goldAccent = Color(0xFFC8A951)
-    val sheikhPlayer = remember { SheikhAudioPlayer(context) }
-    var selectedMuezzinId by remember { mutableStateOf("alafasy") }
+    val alignedGreen = Color(0xFF10B981)
 
+    val sheikhPlayer = remember { SheikhAudioPlayer(context) }
     DisposableEffect(Unit) {
         onDispose { sheikhPlayer.release() }
     }
@@ -104,16 +133,62 @@ fun PrayerQiblaScreen(
     var showCityDialog by remember { mutableStateOf(false) }
 
     var selectedTab by remember { mutableIntStateOf(0) } // 0: القبلة واليوم، 1: جدول الشهر
+    var qiblaMode by remember { mutableStateOf(QiblaDisplayMode.COMPASS_2D) }
 
-    // بوصلة القبلة ومستشعر التوجيه
-    var currentAzimuth by remember { mutableFloatStateOf(0f) }
-    val smoothedAzimuth by animateFloatAsState(
-        targetValue = currentAzimuth,
-        animationSpec = tween(durationMillis = 200),
-        label = "SmoothedAzimuth"
+    // مستشعر التوجيه وبوصلة القبلة
+    var rawHeading by remember { mutableFloatStateOf(0f) }
+    var sensorAccuracy by remember { mutableIntStateOf(SensorManager.SENSOR_STATUS_ACCURACY_HIGH) }
+    var isLowAccuracy by remember { mutableStateOf(false) }
+
+    // إذن الكاميرا للواقع المعزز
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasCameraPermission = granted
+        if (!granted) {
+            qiblaMode = QiblaDisplayMode.COMPASS_2D
+        }
+    }
+
+    // حساب زاوية القبلة الكروية من الموقع
+    val qiblaBearing = remember(selectedCity) {
+        QiblaCalculator.calculateBearing(selectedCity.latitude, selectedCity.longitude)
+    }
+
+    // تصحيح الانحراف المغناطيسي للحصول على True Azimuth
+    val trueHeading = remember(rawHeading, selectedCity) {
+        QiblaCalculator.calculateTrueAzimuth(rawHeading, selectedCity.latitude, selectedCity.longitude)
+    }
+
+    // تنعيم حركة المؤشر
+    val smoothedHeading by animateFloatAsState(
+        targetValue = trueHeading,
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        label = "SmoothedHeading"
     )
 
-    // قراءة مستشعر التوجيه في الأندرويد
+    // فرق الزاوية الأقصر وإرشادات التوجيه
+    val shortestDiff = remember(smoothedHeading, qiblaBearing) {
+        QiblaCalculator.calculateShortestDifference(smoothedHeading, qiblaBearing)
+    }
+    val isFacingQibla = abs(shortestDiff) <= 3.0f
+
+    // اهتزاز لمسي لمرة واحدة عند محاذاة القبلة تماماً
+    var wasFacingQibla by remember { mutableStateOf(false) }
+    LaunchedEffect(isFacingQibla) {
+        if (isFacingQibla && !wasFacingQibla) {
+            haptic.heavy()
+        }
+        wasFacingQibla = isFacingQibla
+    }
+
+    // مستشعرات الحركة والبوصلة
     DisposableEffect(Unit) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         val rotationSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
@@ -121,6 +196,7 @@ fun PrayerQiblaScreen(
         val magnetSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
 
         val rotationMatrix = FloatArray(9)
+        val remappedMatrix = FloatArray(9)
         val orientationAngles = FloatArray(3)
 
         val lastAccelerometer = FloatArray(3)
@@ -132,9 +208,15 @@ fun PrayerQiblaScreen(
             override fun onSensorChanged(event: SensorEvent) {
                 if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
                     SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
-                    SensorManager.getOrientation(rotationMatrix, orientationAngles)
-                    val azimuthInDegrees = Math.toDegrees(orientationAngles[0].toDouble()).toFloat()
-                    currentAzimuth = (azimuthInDegrees + 360) % 360
+                    SensorManager.remapCoordinateSystem(
+                        rotationMatrix,
+                        SensorManager.AXIS_X,
+                        SensorManager.AXIS_Z,
+                        remappedMatrix
+                    )
+                    SensorManager.getOrientation(remappedMatrix, orientationAngles)
+                    val deg = Math.toDegrees(orientationAngles[0].toDouble()).toFloat()
+                    rawHeading = (deg + 360f) % 360f
                 } else if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
                     System.arraycopy(event.values, 0, lastAccelerometer, 0, event.values.size)
                     lastAccelerometerSet = true
@@ -145,14 +227,24 @@ fun PrayerQiblaScreen(
 
                 if (lastAccelerometerSet && lastMagnetometerSet) {
                     if (SensorManager.getRotationMatrix(rotationMatrix, null, lastAccelerometer, lastMagnetometer)) {
-                        SensorManager.getOrientation(rotationMatrix, orientationAngles)
-                        val azimuthInDegrees = Math.toDegrees(orientationAngles[0].toDouble()).toFloat()
-                        currentAzimuth = (azimuthInDegrees + 360) % 360
+                        SensorManager.remapCoordinateSystem(
+                            rotationMatrix,
+                            SensorManager.AXIS_X,
+                            SensorManager.AXIS_Z,
+                            remappedMatrix
+                        )
+                        SensorManager.getOrientation(remappedMatrix, orientationAngles)
+                        val deg = Math.toDegrees(orientationAngles[0].toDouble()).toFloat()
+                        rawHeading = (deg + 360f) % 360f
                     }
                 }
             }
 
-            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+                sensorAccuracy = accuracy
+                isLowAccuracy = (accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE ||
+                        accuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW)
+            }
         }
 
         if (rotationSensor != null) {
@@ -173,17 +265,10 @@ fun PrayerQiblaScreen(
         monthlySchedule = PrayerTimesHelper.calculateMonthlySchedule(selectedCity)
     }
 
-    val deepEmerald = emeraldPrimary
-
-    // الفرق بين زاوية الهاتف وزاوية القبلة
-    val qiblaBearing = prayerState.qiblaDirection.toFloat()
-    val diff = abs(smoothedAzimuth - qiblaBearing)
-    val isFacingQibla = diff < 4f || diff > 356f
-
-    val compassGlowColor by animateColorAsState(
-        targetValue = if (isFacingQibla) goldAccent else deepEmerald,
-        animationSpec = tween(300),
-        label = "CompassGlow"
+    val glowColor by animateColorAsState(
+        targetValue = if (isFacingQibla) alignedGreen else goldAccent,
+        animationSpec = tween(250),
+        label = "QiblaGlowColor"
     )
 
     // نافذة اختيار المدينة
@@ -295,7 +380,6 @@ fun PrayerQiblaScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // شريط التبويب: القبلة واليوم / جدول الشهر
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.surface,
@@ -316,14 +400,13 @@ fun PrayerQiblaScreen(
             }
 
             if (selectedTab == 0) {
-                // تبويب 1: بوصلة القبلة التفاعلية + مواقيت اليوم
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // بطاقة الأذان والمؤذنون الرئيسية في أعلى الشاشة
+                    // بطاقة إعدادات الأذان والمؤذنين
                     item(key = "muezzin_selection_card") {
                         Card(
                             modifier = Modifier
@@ -375,101 +458,270 @@ fun PrayerQiblaScreen(
                         }
                     }
 
-                    // 1. بوصلة القبلة الحية
-                    item(key = "qibla_compass") {
+                    // تنبيه انخفاض دقة البوصلة
+                    if (isLowAccuracy) {
+                        item(key = "calibration_warning") {
+                            val infiniteTransition = rememberInfiniteTransition(label = "InfinityAnim")
+                            val infinityAlpha by infiniteTransition.animateFloat(
+                                initialValue = 0.4f,
+                                targetValue = 1.0f,
+                                animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
+                                label = "InfinityAlpha"
+                            )
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3CD)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFC107)),
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = Color(0xFF856404),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "دقة حساس البوصلة منخفضة",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF856404)
+                                        )
+                                        Text(
+                                            text = "حرك الهاتف في الهواء على شكل رقم 8 (∞) لمعايرة البوصلة",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFF856404)
+                                        )
+                                    }
+                                    Text(
+                                        text = "∞",
+                                        fontSize = 28.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF856404).copy(alpha = infinityAlpha)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // بطاقة القبلة (2D أو AR)
+                    item(key = "qibla_main_card") {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .border(1.dp, compassGlowColor.copy(alpha = 0.5f), MaterialTheme.shapes.large),
+                                .border(1.5.dp, glowColor.copy(alpha = 0.6f), MaterialTheme.shapes.large),
                             shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(20.dp),
+                                    .padding(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(
-                                    text = if (isFacingQibla) "🕋 أنت باتجاه القبلة الآن بفضل الله!" else "وجّه الهاتف نحو الكعبة المشرفة",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isFacingQibla) goldAccent else MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "زاوية القبلة: ${qiblaBearing.toInt()}° • زاوية الهاتف: ${smoothedAzimuth.toInt()}°",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-
-                                Spacer(modifier = Modifier.height(18.dp))
-
-                                // القرص الدائري للبوصلة
-                                Box(
-                                    modifier = Modifier
-                                        .size(240.dp)
-                                        .clip(CircleShape)
-                                        .background(deepEmerald.copy(alpha = 0.06f))
-                                        .border(2.dp, compassGlowColor, CircleShape),
-                                    contentAlignment = Alignment.Center
+                                // أزرار التبديل بين 2D و AR
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
-                                    // مؤشرات الجهات الأربع
-                                    Canvas(modifier = Modifier.fillMaxSize()) {
-                                        val center = Offset(size.width / 2f, size.height / 2f)
-                                        val radius = size.width / 2f - 16.dp.toPx()
-
-                                        drawCircle(
-                                            color = compassGlowColor.copy(alpha = 0.2f),
-                                            radius = radius,
-                                            style = Stroke(width = 2.dp.toPx())
+                                    FilterChip(
+                                        selected = qiblaMode == QiblaDisplayMode.COMPASS_2D,
+                                        onClick = { qiblaMode = QiblaDisplayMode.COMPASS_2D },
+                                        label = { Text("بوصلة كلاسيكية 🧭") },
+                                        leadingIcon = { Icon(Icons.Default.Explore, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = goldAccent.copy(alpha = 0.2f),
+                                            selectedLabelColor = goldAccent
                                         )
-                                    }
-
-                                    // إبرة البوصلة التي تدور مع الهاتف
-                                    val needleRotation = qiblaBearing - smoothedAzimuth
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .rotate(needleRotation),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        // مؤشر الكعبة في رأس السهم
-                                        Box(
-                                            modifier = Modifier
-                                                .padding(top = 10.dp)
-                                                .size(36.dp)
-                                                .clip(CircleShape)
-                                                .background(if (isFacingQibla) goldAccent else deepEmerald),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(text = "🕋", fontSize = 18.sp)
-                                        }
-
-                                        // مركز البوصلة
-                                        Box(
-                                            modifier = Modifier
-                                                .size(14.dp)
-                                                .clip(CircleShape)
-                                                .background(compassGlowColor)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    FilterChip(
+                                        selected = qiblaMode == QiblaDisplayMode.CAMERA_AR,
+                                        onClick = {
+                                            if (hasCameraPermission) {
+                                                qiblaMode = QiblaDisplayMode.CAMERA_AR
+                                            } else {
+                                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                            }
+                                        },
+                                        label = { Text("واقع معزز (AR) 📷") },
+                                        leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = goldAccent.copy(alpha = 0.2f),
+                                            selectedLabelColor = goldAccent
                                         )
-
-                                        // الذيل الجنوبي
-                                        Box(
-                                            modifier = Modifier
-                                                .padding(bottom = 12.dp)
-                                                .size(10.dp)
-                                                .clip(CircleShape)
-                                                .background(Color.Gray.copy(alpha = 0.5f))
-                                        )
-                                    }
+                                    )
                                 }
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
+                                // إرشادات التوجيه
+                                val (guidanceText, isAligned) = QiblaCalculator.getGuidanceText(smoothedHeading, qiblaBearing)
                                 Text(
-                                    text = "ضع الهاتف مستوياً وحركه ببطء حتى تضيء البوصلة باللون الذهبي",
+                                    text = if (isAligned) "🕋 أنت بمواجهة القبلة تماماً بفضل الله!" else guidanceText,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isAligned) alignedGreen else goldAccent,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "زاوية القبلة: ${qiblaBearing.roundToInt()}° • توجيه الجهاز: ${smoothedHeading.roundToInt()}°",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                if (qiblaMode == QiblaDisplayMode.CAMERA_AR && hasCameraPermission) {
+                                    // وضع الواقع المعزز بالكاميرا
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(300.dp)
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .border(2.dp, glowColor, RoundedCornerShape(16.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AndroidView(
+                                            modifier = Modifier.fillMaxSize(),
+                                            factory = { ctx ->
+                                                val previewView = PreviewView(ctx)
+                                                val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                                                cameraProviderFuture.addListener({
+                                                    val cameraProvider = cameraProviderFuture.get()
+                                                    val preview = Preview.Builder().build().also {
+                                                        it.surfaceProvider = previewView.surfaceProvider
+                                                    }
+                                                    val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                                                    try {
+                                                        cameraProvider.unbindAll()
+                                                        cameraProvider.bindToLifecycle(
+                                                            lifecycleOwner,
+                                                            cameraSelector,
+                                                            preview
+                                                        )
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
+                                                    }
+                                                }, ContextCompat.getMainExecutor(ctx))
+                                                previewView
+                                            }
+                                        )
+
+                                        // تراكب AR للقبلة
+                                        Canvas(modifier = Modifier.fillMaxSize()) {
+                                            val cX = size.width / 2f
+                                            val cY = size.height / 2f
+                                            // رسم خط الأفق والتصويب
+                                            drawLine(
+                                                color = Color.White.copy(alpha = 0.5f),
+                                                start = Offset(cX - 60.dp.toPx(), cY),
+                                                end = Offset(cX + 60.dp.toPx(), cY),
+                                                strokeWidth = 2.dp.toPx()
+                                            )
+                                            drawLine(
+                                                color = Color.White.copy(alpha = 0.5f),
+                                                start = Offset(cX, cY - 60.dp.toPx()),
+                                                end = Offset(cX, cY + 60.dp.toPx()),
+                                                strokeWidth = 2.dp.toPx()
+                                            )
+
+                                            // دائرة تصويب مركزية
+                                            drawCircle(
+                                                color = if (isFacingQibla) alignedGreen else goldAccent,
+                                                radius = 35.dp.toPx(),
+                                                style = Stroke(width = 3.dp.toPx())
+                                            )
+                                        }
+
+                                        // سهم أو رمز الكعبة المتموضع بحسب الزاوية
+                                        val horizontalOffset = (shortestDiff * 4.5f).coerceIn(-140f, 140f)
+                                        Box(
+                                            modifier = Modifier
+                                                .offset(x = horizontalOffset.dp)
+                                                .size(54.dp)
+                                                .clip(CircleShape)
+                                                .background(if (isFacingQibla) alignedGreen else goldAccent)
+                                                .border(2.dp, Color.White, CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(text = "🕋", fontSize = 26.sp)
+                                        }
+                                    }
+                                } else {
+                                    // وضع البوصلة الكلاسيكية (2D)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(240.dp)
+                                            .clip(CircleShape)
+                                            .background(emeraldPrimary.copy(alpha = 0.06f))
+                                            .border(2.5.dp, glowColor, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Canvas(modifier = Modifier.fillMaxSize()) {
+                                            val center = Offset(size.width / 2f, size.height / 2f)
+                                            val radius = size.width / 2f - 16.dp.toPx()
+
+                                            drawCircle(
+                                                color = glowColor.copy(alpha = 0.2f),
+                                                radius = radius,
+                                                style = Stroke(width = 2.dp.toPx())
+                                            )
+                                        }
+
+                                        val needleRotation = qiblaBearing - smoothedHeading
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .rotate(needleRotation),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .padding(top = 10.dp)
+                                                    .size(40.dp)
+                                                    .clip(CircleShape)
+                                                    .background(if (isFacingQibla) alignedGreen else goldAccent)
+                                                    .border(2.dp, Color.White, CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(text = "🕋", fontSize = 20.sp)
+                                            }
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(16.dp)
+                                                    .clip(CircleShape)
+                                                    .background(glowColor)
+                                            )
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .padding(bottom = 12.dp)
+                                                    .size(10.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.Gray.copy(alpha = 0.5f))
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = if (qiblaMode == QiblaDisplayMode.CAMERA_AR)
+                                        "وجّه كاميرا الهاتف حولك حتى يظهر رمز الكعبة المشرفة في منتصف دائرة التصويب"
+                                    else
+                                        "ضع الهاتف مستوياً وحركه ببطء حتى يضيء المؤشر بالأخضر الزمردي",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center
@@ -478,7 +730,7 @@ fun PrayerQiblaScreen(
                         }
                     }
 
-                    // 2. بطاقة صلوات اليوم
+                    // بطاقة صلوات اليوم
                     item(key = "today_prayers") {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -555,7 +807,7 @@ fun PrayerQiblaScreen(
                     }
                 }
             } else {
-                // تبويب 2: جدول مواقيت الشهر بالكامل
+                // جدول مواقيت الشهر بالكامل
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
@@ -564,7 +816,7 @@ fun PrayerQiblaScreen(
                     item(key = "monthly_header") {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = deepEmerald),
+                            colors = CardDefaults.cardColors(containerColor = emeraldPrimary),
                             shape = MaterialTheme.shapes.medium
                         ) {
                             Row(
