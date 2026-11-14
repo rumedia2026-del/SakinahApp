@@ -20,6 +20,9 @@ interface ZikrDao {
     @Query("SELECT * FROM azkar WHERE isFavorite = 1 ORDER BY id ASC")
     fun getFavoriteAzkar(): Flow<List<ZikrEntity>>
 
+    @Query("SELECT id FROM azkar WHERE isFavorite = 1")
+    suspend fun getFavoriteIds(): List<Int>
+
     @Query("SELECT * FROM azkar WHERE emotionalTags LIKE '%' || :tag || '%'")
     fun getAzkarByEmotionalTag(tag: String): Flow<List<ZikrEntity>>
 

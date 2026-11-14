@@ -122,19 +122,50 @@ class SocialMediaOverlayService : Service() {
             setPadding(0, 8, 0, 32)
         }
 
-        // زر التسبيح الأخضر الكبير "سبّحت +10 📿"
-        val tasbihBtn = Button(this).apply {
-            text = "سبّحت +١٠ 📿"
+        // 1. زر "اذهب للمصحف الآن 📖" (الزر الأساسي)
+        val quranBtn = Button(this).apply {
+            text = "اذهب للمصحف الآن 📖"
             setTextColor(Color.WHITE)
-            textSize = 17f
+            textSize = 16f
             setTypeface(null, Typeface.BOLD)
             val btnBg = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 32f
-                setColor(Color.parseColor("#0F3D2E"))
+                cornerRadius = 28f
+                setColor(Color.parseColor("#0F3D2E")) // زمردي إسلامي عميق
             }
             background = btnBg
-            setPadding(40, 24, 40, 24)
+            setPadding(40, 20, 40, 20)
+            setOnClickListener {
+                vibrateClick()
+                val quranIntent = Intent(this@SocialMediaOverlayService, com.sakinah.app.MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra("destination", "quran")
+                }
+                startActivity(quranIntent)
+                closeOverlay()
+            }
+        }
+
+        // 2. صف الأزرار الثانوية (سبحت +10 / ذكرني بعد 10 دقائق)
+        val actionRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(0, 16, 0, 0)
+        }
+
+        val tasbihBtn = Button(this).apply {
+            text = "سبّحت +١٠ 📿"
+            setTextColor(Color.parseColor("#0F3D2E"))
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+            val btnBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 24f
+                setColor(Color.parseColor("#E8F0EC"))
+                setStroke(2, Color.parseColor("#C8A951"))
+            }
+            background = btnBg
+            setPadding(24, 14, 24, 14)
             setOnClickListener {
                 vibrateClick()
                 addTasbihProgress(10)
@@ -142,22 +173,35 @@ class SocialMediaOverlayService : Service() {
             }
         }
 
-        // زر تذكير لاحقاً
-        val laterBtn = TextView(this).apply {
-            text = "تذكير لاحقاً"
+        val snoozeBtn = Button(this).apply {
+            text = "ذكرني بعد 10 دقائق ⏳"
             setTextColor(Color.parseColor("#666666"))
             textSize = 13f
-            gravity = Gravity.CENTER
-            setPadding(0, 24, 0, 4)
+            setTypeface(null, Typeface.NORMAL)
+            val btnBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 24f
+                setColor(Color.parseColor("#F0F0F0"))
+            }
+            background = btnBg
+            setPadding(20, 14, 20, 14)
             setOnClickListener {
+                SocialMediaReminderManager.snooze(this@SocialMediaOverlayService, 10)
                 closeOverlay()
             }
         }
 
+        actionRow.addView(tasbihBtn)
+        val space = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(20, 1)
+        }
+        actionRow.addView(space)
+        actionRow.addView(snoozeBtn)
+
         cardLayout.addView(headerTv)
         cardLayout.addView(msgTv)
-        cardLayout.addView(tasbihBtn)
-        cardLayout.addView(laterBtn)
+        cardLayout.addView(quranBtn)
+        cardLayout.addView(actionRow)
 
         rootLayout.addView(cardLayout)
         overlayView = rootLayout

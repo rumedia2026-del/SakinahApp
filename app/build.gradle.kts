@@ -132,6 +132,11 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.adhan)
 
+    // CameraX
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+
     // Media3 ExoPlayer
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.common)
