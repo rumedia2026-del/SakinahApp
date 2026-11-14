@@ -1,6 +1,7 @@
 package com.sakinah.app.feature.quran
 
 import android.content.Context
+import android.util.Log
 import com.sakinah.app.R
 import com.sakinah.app.feature.quran.model.AyahItem
 import com.sakinah.app.feature.quran.model.JuzItem
@@ -152,19 +153,27 @@ class QuranRepository @Inject constructor(
 
     private fun ensureUthmaniLoaded() {
         if (uthmaniJsonRoot == null) {
-            val stream = context.resources.openRawResource(R.raw.quran_uthmani)
-            val reader = BufferedReader(InputStreamReader(stream, "UTF-8"))
-            val content = reader.use { it.readText() }
-            uthmaniJsonRoot = JSONObject(content)
+            try {
+                val stream = context.resources.openRawResource(R.raw.quran_uthmani)
+                val reader = BufferedReader(InputStreamReader(stream, "UTF-8"))
+                val content = reader.use { it.readText() }
+                uthmaniJsonRoot = JSONObject(content)
+            } catch (e: Exception) {
+                Log.e("QuranRepository", "Failed to load quran_uthmani raw JSON", e)
+            }
         }
     }
 
     private fun ensureTafsirLoaded() {
         if (tafsirJsonRoot == null) {
-            val stream = context.resources.openRawResource(R.raw.quran_tafsir)
-            val reader = BufferedReader(InputStreamReader(stream, "UTF-8"))
-            val content = reader.use { it.readText() }
-            tafsirJsonRoot = JSONObject(content)
+            try {
+                val stream = context.resources.openRawResource(R.raw.quran_tafsir)
+                val reader = BufferedReader(InputStreamReader(stream, "UTF-8"))
+                val content = reader.use { it.readText() }
+                tafsirJsonRoot = JSONObject(content)
+            } catch (e: Exception) {
+                Log.e("QuranRepository", "Failed to load quran_tafsir raw JSON", e)
+            }
         }
     }
 
@@ -176,7 +185,7 @@ class QuranRepository @Inject constructor(
                 val content = reader.use { it.readText() }
                 jalalaynJsonRoot = JSONObject(content)
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("QuranRepository", "Failed to load quran_jalalayn raw JSON", e)
             }
         }
     }

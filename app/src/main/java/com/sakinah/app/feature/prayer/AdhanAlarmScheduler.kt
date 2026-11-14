@@ -4,11 +4,16 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.location.Location
+import android.location.LocationManager
 import android.os.Build
+import android.util.Log
+import com.batoulapps.adhan.Coordinates
 import com.batoulapps.adhan.Madhab
 import com.batoulapps.adhan.Prayer
 import com.batoulapps.adhan.PrayerTimes
 import com.batoulapps.adhan.data.DateComponents
+import com.sakinah.app.MainActivity
 import java.util.Calendar
 
 object AdhanAlarmScheduler {
@@ -24,6 +29,7 @@ object AdhanAlarmScheduler {
     const val KEY_DEAF_MODE = "adhan_deaf_mode"
     const val KEY_MOSQUE_SILENT = "adhan_mosque_silent"
     const val KEY_ADHAN_VOLUME = "adhan_volume_level" // 0..100
+    const val KEY_SELECTED_CITY = "selected_city_name"
 
     fun scheduleAllPrayers(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -32,15 +38,16 @@ object AdhanAlarmScheduler {
         val isIqamaEnabled = prefs.getBoolean(KEY_IQAMA_ENABLED, true)
         val defaultMuezzinId = prefs.getString(KEY_SELECTED_MUEZZIN, "makkah") ?: "makkah"
         val fajrMuezzinId = prefs.getString(KEY_FAJR_MUEZZIN, defaultMuezzinId) ?: defaultMuezzinId
+        val savedCityName = prefs.getString(KEY_SELECTED_CITY, "القاهرة") ?: "القاهرة"
 
         if (!isAdhanEnabled) return
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
         val now = System.currentTimeMillis()
 
-        // حساب مواقيت اليوم والغد
-        val city = PrayerTimesHelper.SUPPORTED_CITIES.first() // رشيد / القاهرة افتراضياً
-        val params = city.calculationMethod.parameters.apply {
+        // تحديد الموقع: آخر موقع GPS معروف أو المدينة المختارة/الافتراضية
+        val (coordinates, calculationMethod) = getEffectiveCoordinatesAndMethod(context, savedCityName)
+        val params = calculationMethod.parameters.apply {
             madhab = Madhab.SHAFI
         }
 
@@ -50,7 +57,7 @@ object AdhanAlarmScheduler {
                 add(Calendar.DAY_OF_YEAR, dayOffset)
             }
             val dateComponents = DateComponents.from(cal.time)
-            val prayerTimes = PrayerTimes(city.coordinates, dateComponents, params)
+            val prayerTimes = PrayerTimes(coordinates, dateComponents, params)
 
             val prayerEntries = listOf(
                 Triple("الفجر", Prayer.FAJR, prayerTimes.fajr),
@@ -68,7 +75,7 @@ object AdhanAlarmScheduler {
 
                 val effectiveMuezzin = if (prayerType == Prayer.FAJR) fajrMuezzinId else defaultMuezzinId
 
-                // 1. تنبيه الأذان الفعلي
+                // 1. تنبيه الأذان الفعلي عبر setAlarmClock
                 if (triggerTime > now) {
                     val requestCode = getRequestCode(dayOffset, prayerType, 0)
                     val adhanIntent = Intent(context, AdhanAlarmReceiver::class.java).apply {
@@ -82,7 +89,7 @@ object AdhanAlarmScheduler {
                         adhanIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
-                    setExactAlarm(alarmManager, triggerTime, pendingIntent)
+                    setAlarmClock(alarmManager, context, triggerTime, pendingIntent)
                 }
 
                 // 2. تنبيه اقتراب الصلاة (15 دقيقة قبل الأذان)
@@ -99,7 +106,7 @@ object AdhanAlarmScheduler {
                         preIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
-                    setExactAlarm(alarmManager, preAdhanTime, prePendingIntent)
+                    setAlarmClock(alarmManager, context, preAdhanTime, prePendingIntent)
                 }
 
                 // 3. تنبيه وقت الإقامة (20 دقيقة بعد الأذان)
@@ -116,22 +123,78 @@ object AdhanAlarmScheduler {
                         iqamaIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
-                    setExactAlarm(alarmManager, iqamaTime, iqamaPendingIntent)
+                    setAlarmClock(alarmManager, context, iqamaTime, iqamaPendingIntent)
                 }
             }
         }
     }
 
-    private fun setExactAlarm(alarmManager: AlarmManager, triggerAtMillis: Long, pendingIntent: PendingIntent) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (alarmManager.canScheduleExactAlarms()) {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
-            } else {
-                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
-            }
-        } else {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+    /**
+     * جدولة اختبار حقيقي بعد ثوانٍ محددة
+     */
+    fun scheduleTestAdhan(context: Context, delaySeconds: Int = 10, muezzinId: String = "makkah") {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        val triggerTime = System.currentTimeMillis() + (delaySeconds * 1000L)
+
+        val adhanIntent = Intent(context, AdhanAlarmReceiver::class.java).apply {
+            action = AdhanAlarmReceiver.ACTION_ADHAN
+            putExtra(AdhanAlarmReceiver.EXTRA_PRAYER_NAME, "اختبار الأذان")
+            putExtra(AdhanAlarmReceiver.EXTRA_MUEZZIN_ID, muezzinId)
         }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            9999,
+            adhanIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        setAlarmClock(alarmManager, context, triggerTime, pendingIntent)
+    }
+
+    private fun setAlarmClock(
+        alarmManager: AlarmManager,
+        context: Context,
+        triggerAtMillis: Long,
+        operation: PendingIntent
+    ) {
+        val showIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val showPendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            showIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerAtMillis, showPendingIntent)
+        try {
+            alarmManager.setAlarmClock(alarmClockInfo, operation)
+        } catch (e: SecurityException) {
+            Log.e("AdhanAlarmScheduler", "Exact alarm permission SCHEDULE_EXACT_ALARM not granted to schedule alarm clock at $triggerAtMillis", e)
+        } catch (e: Exception) {
+            Log.e("AdhanAlarmScheduler", "Failed to schedule exact alarm clock at $triggerAtMillis", e)
+        }
+    }
+
+    private fun getEffectiveCoordinatesAndMethod(
+        context: Context,
+        savedCityName: String
+    ): Pair<Coordinates, com.batoulapps.adhan.CalculationMethod> {
+        val city = PrayerTimesHelper.getCityByName(savedCityName)
+        // فحص آخر موقع GPS معروف إن توفرت الصلاحية
+        try {
+            val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            val lastGps = lm?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                ?: lm?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            if (lastGps != null) {
+                return Coordinates(lastGps.latitude, lastGps.longitude) to city.calculationMethod
+            }
+        } catch (_: SecurityException) {
+            // الصلاحية غير ممنوحة، استخدام المدينة المختارة
+        } catch (_: Exception) {
+            // تجاوز أي خطأ آخر
+        }
+        return city.coordinates to city.calculationMethod
     }
 
     private fun getRequestCode(dayOffset: Int, prayer: Prayer, alertType: Int): Int {

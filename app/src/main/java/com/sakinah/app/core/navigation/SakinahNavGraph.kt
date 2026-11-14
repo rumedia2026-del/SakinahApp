@@ -61,7 +61,7 @@ private val navItems = listOf(
 private const val NAV_ANIM_DURATION = 250
 
 @Composable
-fun SakinahNavGraph() {
+fun SakinahNavGraph(startDestination: String = Screen.Home.route) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -103,7 +103,7 @@ fun SakinahNavGraph() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding),
             enterTransition = {
                 fadeIn(tween(NAV_ANIM_DURATION)) +
@@ -163,7 +163,8 @@ fun SakinahNavGraph() {
             composable(Screen.PrayerTimes.route) {
                 com.sakinah.app.feature.prayer.PrayerQiblaScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onOpenAdhanSettings = { navController.navigate(Screen.AdhanSettings.route) }
+                    onOpenAdhanSettings = { navController.navigate(Screen.AdhanSettings.route) },
+                    onOpenFiqhGuide = { navController.navigate(Screen.FiqhGuide.route) }
                 )
             }
 
@@ -171,6 +172,13 @@ fun SakinahNavGraph() {
             composable(Screen.AdhanSettings.route) {
                 com.sakinah.app.feature.prayer.AdhanSettingsScreen(
                     onBack = { navController.popBackStack() }
+                )
+            }
+
+            // ── شاشة دليل الفقه الميسر ──
+            composable(Screen.FiqhGuide.route) {
+                com.sakinah.app.feature.fiqh.FiqhGuideScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 

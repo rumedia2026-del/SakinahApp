@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.sakinah.app.MainActivity
@@ -22,14 +23,22 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
         when (action) {
             ACTION_ADHAN -> {
                 // 1. تشغيل الأذان في خدمة Foreground فورية
-                val serviceIntent = Intent(context, AdhanForegroundService::class.java).apply {
-                    putExtra(AdhanForegroundService.EXTRA_PRAYER_NAME, prayerName)
-                    putExtra(AdhanForegroundService.EXTRA_MUEZZIN_ID, muezzinId)
+                try {
+                    val serviceIntent = Intent(context, AdhanForegroundService::class.java).apply {
+                        putExtra(AdhanForegroundService.EXTRA_PRAYER_NAME, prayerName)
+                        putExtra(AdhanForegroundService.EXTRA_MUEZZIN_ID, muezzinId)
+                    }
+                    ContextCompat.startForegroundService(context, serviceIntent)
+                } catch (e: Exception) {
+                    Log.e("AdhanAlarmReceiver", "Failed to start AdhanForegroundService", e)
                 }
-                ContextCompat.startForegroundService(context, serviceIntent)
 
                 // 2. جدولة الصلوات القادمة لضمان استمرار التنبيهات
-                AdhanAlarmScheduler.scheduleAllPrayers(context)
+                try {
+                    AdhanAlarmScheduler.scheduleAllPrayers(context)
+                } catch (e: Exception) {
+                    Log.e("AdhanAlarmReceiver", "Failed to reschedule prayers", e)
+                }
             }
 
             ACTION_PRE_ADHAN -> {

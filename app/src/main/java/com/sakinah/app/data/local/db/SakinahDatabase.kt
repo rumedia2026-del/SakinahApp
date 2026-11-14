@@ -1,9 +1,11 @@
 package com.sakinah.app.data.local.db
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sakinah.app.R
 import com.sakinah.app.data.local.db.dao.CategoryDao
@@ -44,6 +46,26 @@ abstract class SakinahDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: SakinahDatabase? = null
 
+        val MIGRATIONS: Array<Migration> = (1..9).map { startVersion ->
+            object : Migration(startVersion, 10) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS `munajat` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `title` TEXT NOT NULL,
+                            `content` TEXT NOT NULL,
+                            `emotionTag` TEXT,
+                            `isAnswered` INTEGER NOT NULL,
+                            `createdAt` INTEGER NOT NULL,
+                            `answeredAt` INTEGER
+                        )
+                        """.trimIndent()
+                    )
+                }
+            }
+        }.toTypedArray()
+
         fun getInstance(context: Context, scope: CoroutineScope): SakinahDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -51,7 +73,7 @@ abstract class SakinahDatabase : RoomDatabase() {
                     SakinahDatabase::class.java,
                     DATABASE_NAME
                 )
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(*MIGRATIONS)
                     .addCallback(SakinahDatabaseCallback(context.applicationContext, scope))
                     .build()
                 INSTANCE = instance
@@ -115,14 +137,22 @@ abstract class SakinahDatabase : RoomDatabase() {
                 }
                 database.categoryDao().insertCategories(categories)
 
-                // 2. استخراج وإدراج الأذكار
+                // 2. استخراج وإدراج الأذكار مع الحفاظ التام على مفضلات المستخدم
+                val existingFavorites = try {
+                    database.zikrDao().getFavoriteIds().toSet()
+                } catch (e: Exception) {
+                    emptySet()
+                }
+
                 val azkarArray = rootObject.getJSONArray("azkar")
                 val azkar = mutableListOf<ZikrEntity>()
                 for (i in 0 until azkarArray.length()) {
                     val obj = azkarArray.getJSONObject(i)
+                    val zId = obj.getInt("id")
+                    val isFav = existingFavorites.contains(zId) || obj.optBoolean("isFavorite", false)
                     azkar.add(
                         ZikrEntity(
-                            id = obj.getInt("id"),
+                            id = zId,
                             categoryId = obj.getInt("categoryId"),
                             textWithTashkeel = obj.getString("textWithTashkeel"),
                             textPlain = obj.getString("textPlain"),
@@ -133,14 +163,14 @@ abstract class SakinahDatabase : RoomDatabase() {
                             audioUrl = if (obj.isNull("audioUrl")) null else obj.getString("audioUrl"),
                             emotionalTags = if (obj.isNull("emotionalTags")) null else obj.getString("emotionalTags"),
                             isUserCustom = obj.optBoolean("isUserCustom", false),
-                            isFavorite = obj.optBoolean("isFavorite", false)
+                            isFavorite = isFav
                         )
                     )
                 }
                 database.zikrDao().insertAzkar(azkar)
 
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("SakinahDatabase", "Failed to populate initial data from azkar_seed", e)
             }
         }
     }

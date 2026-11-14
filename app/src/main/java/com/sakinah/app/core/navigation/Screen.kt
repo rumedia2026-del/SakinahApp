@@ -58,6 +58,9 @@ sealed class Screen(val route: String) {
 
     /** إعدادات الأذان والمؤذنين المتقدمة */
     data object AdhanSettings : Screen("adhan_settings")
+
+    /** دليل الفقه العملي الميسر */
+    data object FiqhGuide : Screen("fiqh_guide")
 }
 
 /** عناصر شريط التنقل السفلي */

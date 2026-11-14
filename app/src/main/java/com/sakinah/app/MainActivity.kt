@@ -32,12 +32,13 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val userPrefs by settingsViewModel.userPreferences.collectAsState()
+            val startDest = intent?.getStringExtra("destination") ?: com.sakinah.app.core.navigation.Screen.Home.route
 
             SakinahTheme(
                 themeMode = userPrefs.themeMode,
                 fontSizeMultiplier = userPrefs.fontSizeMultiplier,
             ) {
-                SakinahNavGraph()
+                SakinahNavGraph(startDestination = startDest)
             }
         }
     }

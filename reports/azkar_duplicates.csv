@@ -1,0 +1,16 @@
+id1,id2,categoryId,similarity,action
+1020,1023,1,0.8526,kept_partial
+1044,1047,2,0.8526,kept_partial
+1134,1136,11,0.8621,kept_partial
+1147,1138,11,1.0000,deleted
+1143,1151,11,1.0000,deleted
+1167,1161,12,1.0000,deleted
+1179,1161,12,1.0000,deleted
+1166,1164,12,1.0000,deleted
+1177,1164,12,1.0000,deleted
+1166,1177,12,1.0000,deleted
+1167,1179,12,1.0000,deleted
+1168,1178,12,1.0000,deleted
+1180,1182,12,0.9011,kept_partial
+1184,1180,12,1.0000,deleted
+1182,1184,12,0.9011,kept_partial

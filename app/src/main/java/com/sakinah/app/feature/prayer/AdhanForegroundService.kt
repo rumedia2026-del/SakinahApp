@@ -14,37 +14,26 @@ import android.hardware.SensorManager
 import android.media.AudioAttributes as AndroidAudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
-import android.net.Uri
+import android.media.MediaPlayer
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
-import com.sakinah.app.MainActivity
 import com.sakinah.app.R
 import com.sakinah.app.SakinahApplication
 
 class AdhanForegroundService : Service(), SensorEventListener {
 
-    private var exoPlayer: ExoPlayer? = null
+    private var mediaPlayer: MediaPlayer? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var sensorManager: SensorManager? = null
     private var accelerometer: Sensor? = null
     private var audioManager: AudioManager? = null
     private var vibrator: Vibrator? = null
-
-    private val handler = Handler(Looper.getMainLooper())
-    private var crescendoRunnable: Runnable? = null
-    private var currentVolume = 0.1f
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -79,7 +68,6 @@ class AdhanForegroundService : Service(), SensorEventListener {
 
         val prefs = getSharedPreferences("sakinah_prayer_prefs", Context.MODE_PRIVATE)
         val flipToSilenceEnabled = prefs.getBoolean(AdhanAlarmScheduler.KEY_FLIP_TO_SILENCE, true)
-        val crescendoEnabled = prefs.getBoolean(AdhanAlarmScheduler.KEY_CRESCENDO_VOLUME, true)
         val deafModeEnabled = prefs.getBoolean(AdhanAlarmScheduler.KEY_DEAF_MODE, false)
 
         if (flipToSilenceEnabled && accelerometer != null) {
@@ -90,25 +78,29 @@ class AdhanForegroundService : Service(), SensorEventListener {
             triggerDeafModeVibration(prayerName)
         }
 
+        // إطلاق الإشعار كـ Foreground Service فوراً
         val notification = createNotification(prayerName, muezzinId)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            Log.e("AdhanForegroundService", "Failed to startForeground", e)
         }
 
-        playAdhan(muezzinId, crescendoEnabled)
+        playAdhan(muezzinId)
 
         return START_NOT_STICKY
     }
 
     private fun triggerDeafModeVibration(prayerName: String) {
         try {
-            // نمط اهتزاز مخصص ومميز لكل صلاة
             val timings = when (prayerName) {
                 "الفجر" -> longArrayOf(0, 800, 300, 800)
                 "الظهر" -> longArrayOf(0, 300, 200, 300, 200, 300, 200, 300)
@@ -128,61 +120,35 @@ class AdhanForegroundService : Service(), SensorEventListener {
         }
     }
 
-    private fun playAdhan(muezzinId: String, crescendo: Boolean) {
+    private fun playAdhan(muezzinId: String) {
         try {
             requestAudioFocus()
 
             val rawResId = MuadhinCatalog.getRawResourceId(muezzinId)
-            val uri = Uri.parse("android.resource://$packageName/$rawResId")
-
-            val audioAttributes = AudioAttributes.Builder()
-                .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
-                .setUsage(C.USAGE_ALARM)
-                .build()
-
-            currentVolume = if (crescendo) 0.1f else 1.0f
-
-            exoPlayer = ExoPlayer.Builder(this)
-                .setAudioAttributes(audioAttributes, true)
-                .build().apply {
-                    setMediaItem(MediaItem.fromUri(uri))
-                    volume = currentVolume
-                    prepare()
-                    play()
-                    addListener(object : Player.Listener {
-                        override fun onPlaybackStateChanged(playbackState: Int) {
-                            if (playbackState == Player.STATE_ENDED) {
-                                stopAdhan()
-                            }
-                        }
-                    })
+            val mp = MediaPlayer.create(this, rawResId)
+            if (mp != null) {
+                val audioAttributes = AndroidAudioAttributes.Builder()
+                    .setUsage(AndroidAudioAttributes.USAGE_ALARM)
+                    .setContentType(AndroidAudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+                mp.setAudioAttributes(audioAttributes)
+                mp.setVolume(1.0f, 1.0f)
+                mp.setOnCompletionListener {
+                    stopAdhan()
                 }
-
-            if (crescendo) {
-                startCrescendoVolume()
+                mp.setOnErrorListener { _, _, _ ->
+                    stopAdhan()
+                    true
+                }
+                mp.start()
+                mediaPlayer = mp
+            } else {
+                stopAdhan()
             }
         } catch (e: Exception) {
             e.printStackTrace()
             stopAdhan()
         }
-    }
-
-    private fun startCrescendoVolume() {
-        val totalSteps = 20
-        val stepDurationMs = 500L // 20 steps * 500ms = 10 seconds total
-        var currentStep = 0
-
-        crescendoRunnable = object : Runnable {
-            override fun run() {
-                if (currentStep < totalSteps && exoPlayer != null) {
-                    currentStep++
-                    currentVolume = (currentStep.toFloat() / totalSteps.toFloat()).coerceIn(0.1f, 1.0f)
-                    exoPlayer?.volume = currentVolume
-                    handler.postDelayed(this, stepDurationMs)
-                }
-            }
-        }
-        handler.postDelayed(crescendoRunnable!!, stepDurationMs)
     }
 
     private fun requestAudioFocus() {
@@ -209,7 +175,6 @@ class AdhanForegroundService : Service(), SensorEventListener {
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
             val zAxis = event.values[2]
-            // عندما يوضع الهاتف مقلوباً على وجهه تكون قيمة المحور Z سالبة بقوة (< -7.0)
             if (zAxis < -7.0f) {
                 stopAdhan()
             }
@@ -221,52 +186,61 @@ class AdhanForegroundService : Service(), SensorEventListener {
     private fun createNotification(prayerName: String, muezzinId: String): Notification {
         val muadhin = MuadhinCatalog.getMuadhinById(muezzinId)
 
-        val openAppIntent = Intent(this, MainActivity::class.java).apply {
+        // نية فتح الشاشة فوق القفل (AdhanAlertActivity)
+        val alertIntent = Intent(this, AdhanAlertActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(AdhanAlertActivity.EXTRA_PRAYER_NAME, prayerName)
+            putExtra(AdhanAlertActivity.EXTRA_MUEZZIN_NAME, muadhin.name)
         }
-        val openAppPendingIntent = PendingIntent.getActivity(
+        val fullScreenPendingIntent = PendingIntent.getActivity(
             this,
-            0,
-            openAppIntent,
+            1001,
+            alertIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // نية زر الإيقاف
         val stopIntent = Intent(this, AdhanForegroundService::class.java).apply {
             action = ACTION_STOP_ADHAN
         }
         val stopPendingIntent = PendingIntent.getService(
             this,
-            1,
+            1002,
             stopIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        return NotificationCompat.Builder(this, SakinahApplication.CHANNEL_ID_ADHAN)
+        val builder = NotificationCompat.Builder(this, SakinahApplication.CHANNEL_ID_ADHAN_URGENT)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("حان الآن موعد أذان $prayerName 🕌")
-            .setContentText("صوت: ${muadhin.name} • اقلب الهاتف لكتم الصوت أو اضغط إيقاف")
+            .setContentText("صوت: ${muadhin.name} • اضغط للإيقاف أو اقلب الهاتف لكتم الصوت")
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setContentIntent(openAppPendingIntent)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(fullScreenPendingIntent)
+            .setFullScreenIntent(fullScreenPendingIntent, true)
             .setOngoing(true)
             .setAutoCancel(false)
-            .addAction(R.drawable.ic_launcher_foreground, "كتم الأذان ⏹", stopPendingIntent)
-            .build()
+            .addAction(R.drawable.ic_launcher_foreground, "إيقاف الأذان ⏹", stopPendingIntent)
+
+        return builder.build()
     }
 
     private fun stopAdhan() {
-        crescendoRunnable?.let { handler.removeCallbacks(it) }
         try {
             sensorManager?.unregisterListener(this)
         } catch (e: Exception) {
             e.printStackTrace()
         }
         try {
-            exoPlayer?.stop()
-            exoPlayer?.release()
-            exoPlayer = null
+            mediaPlayer?.let {
+                if (it.isPlaying) it.stop()
+                it.release()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
+        } finally {
+            mediaPlayer = null
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
