@@ -51,7 +51,6 @@ abstract class SakinahDatabase : RoomDatabase() {
                     SakinahDatabase::class.java,
                     DATABASE_NAME
                 )
-                    .fallbackToDestructiveMigration()
                     .addCallback(SakinahDatabaseCallback(context.applicationContext, scope))
                     .build()
                 INSTANCE = instance
@@ -115,14 +114,22 @@ abstract class SakinahDatabase : RoomDatabase() {
                 }
                 database.categoryDao().insertCategories(categories)
 
-                // 2. استخراج وإدراج الأذكار
+                // 2. استخراج وإدراج الأذكار مع الحفاظ التام على مفضلات المستخدم
+                val existingFavorites = try {
+                    database.zikrDao().getFavoriteIds().toSet()
+                } catch (e: Exception) {
+                    emptySet()
+                }
+
                 val azkarArray = rootObject.getJSONArray("azkar")
                 val azkar = mutableListOf<ZikrEntity>()
                 for (i in 0 until azkarArray.length()) {
                     val obj = azkarArray.getJSONObject(i)
+                    val zId = obj.getInt("id")
+                    val isFav = existingFavorites.contains(zId) || obj.optBoolean("isFavorite", false)
                     azkar.add(
                         ZikrEntity(
-                            id = obj.getInt("id"),
+                            id = zId,
                             categoryId = obj.getInt("categoryId"),
                             textWithTashkeel = obj.getString("textWithTashkeel"),
                             textPlain = obj.getString("textPlain"),
@@ -133,7 +140,7 @@ abstract class SakinahDatabase : RoomDatabase() {
                             audioUrl = if (obj.isNull("audioUrl")) null else obj.getString("audioUrl"),
                             emotionalTags = if (obj.isNull("emotionalTags")) null else obj.getString("emotionalTags"),
                             isUserCustom = obj.optBoolean("isUserCustom", false),
-                            isFavorite = obj.optBoolean("isFavorite", false)
+                            isFavorite = isFav
                         )
                     )
                 }

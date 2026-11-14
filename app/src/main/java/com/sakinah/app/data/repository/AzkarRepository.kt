@@ -1,10 +1,12 @@
 package com.sakinah.app.data.repository
 
+import com.sakinah.app.core.utils.ArabicNormalizer
 import com.sakinah.app.data.local.db.dao.CategoryDao
 import com.sakinah.app.data.local.db.dao.ZikrDao
 import com.sakinah.app.data.local.db.entities.CategoryEntity
 import com.sakinah.app.data.local.db.entities.ZikrEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,11 +21,21 @@ class AzkarRepository @Inject constructor(
     suspend fun getCategoryById(id: Int): CategoryEntity? = categoryDao.getCategoryById(id)
 
     fun getAzkarByCategory(categoryId: Int): Flow<List<ZikrEntity>> =
-        zikrDao.getAzkarByCategory(categoryId)
+        zikrDao.getAzkarByCategory(categoryId).map { list ->
+            list.distinctBy { z ->
+                val norm = ArabicNormalizer.normalize(z.textPlain.ifBlank { z.textWithTashkeel })
+                if (norm.isNotBlank()) norm else z.id.toString()
+            }
+        }
 
     fun getZikrById(id: Int): Flow<ZikrEntity?> = zikrDao.getZikrById(id)
 
-    fun getFavoriteAzkar(): Flow<List<ZikrEntity>> = zikrDao.getFavoriteAzkar()
+    fun getFavoriteAzkar(): Flow<List<ZikrEntity>> = zikrDao.getFavoriteAzkar().map { list ->
+        list.distinctBy { z ->
+            val norm = ArabicNormalizer.normalize(z.textPlain.ifBlank { z.textWithTashkeel })
+            if (norm.isNotBlank()) norm else z.id.toString()
+        }
+    }
 
     fun getAzkarByEmotionalTag(tag: String): Flow<List<ZikrEntity>> =
         zikrDao.getAzkarByEmotionalTag(tag)

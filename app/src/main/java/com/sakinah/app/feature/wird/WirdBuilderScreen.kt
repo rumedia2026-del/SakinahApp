@@ -78,9 +78,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.sakinah.app.core.navigation.Screen
 import com.sakinah.app.core.utils.rememberHapticFeedback
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
-import java.util.Locale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.DisposableEffect
 import com.sakinah.app.core.utils.audio.SheikhAudioPlayer
@@ -112,34 +109,10 @@ fun WirdBuilderScreen(
     val sheikhPlayer = remember { SheikhAudioPlayer(context) }
     val isAudioPlaying by sheikhPlayer.isPlaying.collectAsState()
     var currentlyPlayingZikrId by remember { mutableStateOf<Int?>(null) }
-    var isTtsPlaying by remember { mutableStateOf(false) }
-    var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
 
     DisposableEffect(Unit) {
-        var localTts: TextToSpeech? = null
-        localTts = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                localTts?.language = Locale("ar")
-                localTts?.setPitch(0.88f)
-                localTts?.setSpeechRate(0.85f)
-                localTts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) { isTtsPlaying = true }
-                    override fun onDone(utteranceId: String?) {
-                        isTtsPlaying = false
-                        currentlyPlayingZikrId = null
-                    }
-                    override fun onError(utteranceId: String?) {
-                        isTtsPlaying = false
-                        currentlyPlayingZikrId = null
-                    }
-                })
-                ttsEngine = localTts
-            }
-        }
         onDispose {
             sheikhPlayer.release()
-            localTts?.stop()
-            localTts?.shutdown()
         }
     }
 
@@ -649,13 +622,14 @@ fun WirdBuilderScreen(
 
                 items(favorites, key = { it.id }) { zikr ->
                     val currentCount = progressMap[zikr.id] ?: 0
+                    val audioUrls = remember(zikr) { AzkarAudioManager.getAudioUrlsForZikr(zikr) }
                     ZikrCardItem(
                         zikr = zikr,
                         currentCount = currentCount,
                         showTashkeel = true,
                         fontSizeMultiplier = 1.0f,
                         haptic = haptic,
-                        isPlayingAudio = ((isAudioPlaying || isTtsPlaying) && currentlyPlayingZikrId == zikr.id),
+                        isPlayingAudio = (isAudioPlaying && currentlyPlayingZikrId == zikr.id),
                         onTap = {
                             if (currentCount < zikr.repeatCount) {
                                 progressMap[zikr.id] = currentCount + 1
@@ -664,36 +638,20 @@ fun WirdBuilderScreen(
                         onToggleFavorite = {
                             viewModel.toggleFavorite(zikr)
                         },
-                        onPlayAudio = {
-                            if ((isAudioPlaying || isTtsPlaying) && currentlyPlayingZikrId == zikr.id) {
-                                sheikhPlayer.stop()
-                                ttsEngine?.stop()
-                                isTtsPlaying = false
-                                currentlyPlayingZikrId = null
-                            } else {
-                                sheikhPlayer.stop()
-                                ttsEngine?.stop()
-                                isTtsPlaying = false
-                                currentlyPlayingZikrId = zikr.id
-
-                                val urls = AzkarAudioManager.getAudioUrlsForZikr(zikr)
-                                if (urls.isNotEmpty()) {
-                                    sheikhPlayer.playUrls(urls) {
+                        onPlayAudio = if (audioUrls.isNotEmpty()) {
+                            {
+                                if (isAudioPlaying && currentlyPlayingZikrId == zikr.id) {
+                                    sheikhPlayer.stop()
+                                    currentlyPlayingZikrId = null
+                                } else {
+                                    sheikhPlayer.stop()
+                                    currentlyPlayingZikrId = zikr.id
+                                    sheikhPlayer.playUrls(audioUrls) {
                                         currentlyPlayingZikrId = null
                                     }
-                                } else {
-                                    val textToSpeak = zikr.textPlain.ifBlank { zikr.textWithTashkeel }
-                                    isTtsPlaying = true
-                                    val params = android.os.Bundle()
-                                    ttsEngine?.speak(
-                                        textToSpeak,
-                                        TextToSpeech.QUEUE_FLUSH,
-                                        params,
-                                        "wird_${zikr.id}"
-                                    )
                                 }
                             }
-                        }
+                        } else null
                     )
                 }
             }
