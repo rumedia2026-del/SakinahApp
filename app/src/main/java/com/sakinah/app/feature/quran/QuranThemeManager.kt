@@ -55,11 +55,11 @@ object QuranThemeManager {
         ),
         QuranTheme(
             id = 5,
-            nameAr = "الخشوع الأسود OLED",
-            backgroundColor = Color(0xFF000000),
-            textColor = Color(0xFFE0E0E0),
-            borderColor = Color(0xFF555555),
-            accentColor = Color(0xFF9E9E9E)
+            nameAr = "الوضع المظلم الملكي",
+            backgroundColor = Color(0xFF121417),
+            textColor = Color(0xFFF5F0E6),
+            borderColor = Color(0xFFFCD34D),
+            accentColor = Color(0xFFFCD34D)
         )
     )
 

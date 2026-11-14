@@ -61,7 +61,7 @@ private val navItems = listOf(
 private const val NAV_ANIM_DURATION = 250
 
 @Composable
-fun SakinahNavGraph() {
+fun SakinahNavGraph(startDestination: String = Screen.Home.route) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -103,7 +103,7 @@ fun SakinahNavGraph() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding),
             enterTransition = {
                 fadeIn(tween(NAV_ANIM_DURATION)) +

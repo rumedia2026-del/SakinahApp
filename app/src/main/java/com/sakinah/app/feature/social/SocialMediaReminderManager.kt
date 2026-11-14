@@ -35,6 +35,7 @@ object SocialMediaReminderManager {
     )
 
     val WITTY_MESSAGES = listOf(
+        "أدرك نفسك يا بطل.. تيك توك مش هيدخلك الجنة! قوم صل ركعتين أو اقرأ صفحة قرآن أحسن لك 🤍",
         "لسه بتقلب في الريلز؟ طب صلي على النبي الأول واربح حسنات! ﷺ",
         "التيك توك مش هيشفعلك.. سبّح 10 تسبيحات وتعال كمل! 🌿",
         "يا غالي، الخوارزميات سرقت وقتك.. خذ لك دقيقة استغفار تمسح ذنوبك ✨",
@@ -80,6 +81,13 @@ object SocialMediaReminderManager {
     fun setThresholdMinutes(context: Context, minutes: Int) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putInt(KEY_THRESHOLD_MINUTES, minutes).apply()
+    }
+
+    fun snooze(context: Context, minutes: Int = 10) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        // Adjust last notified time so it snoozes for the given minutes
+        val targetNext = System.currentTimeMillis() - ((15 - minutes).coerceAtLeast(0) * 60 * 1000L)
+        prefs.edit().putLong(KEY_LAST_NOTIFIED_TIME, targetNext).apply()
     }
 
     fun hasUsageAccessPermission(context: Context): Boolean {
