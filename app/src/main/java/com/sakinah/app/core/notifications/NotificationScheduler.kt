@@ -51,6 +51,9 @@ object NotificationScheduler {
             ExistingPeriodicWorkPolicy.KEEP,
             socialWorkRequest
         )
+
+        // جدولة المزامنة السحابية للمحتوى (كل 24 ساعة)
+        com.sakinah.app.core.notifications.workers.RemoteContentSyncWorker.schedulePeriodicSync(context)
     }
 
     private fun schedulePeriodicReminder(

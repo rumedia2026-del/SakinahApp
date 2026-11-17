@@ -25,6 +25,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.sakinah.app.R
 import com.sakinah.app.SakinahApplication
+import java.util.concurrent.atomic.AtomicBoolean
 
 class AdhanForegroundService : Service(), SensorEventListener {
 
@@ -121,6 +122,14 @@ class AdhanForegroundService : Service(), SensorEventListener {
     }
 
     private fun playAdhan(muezzinId: String) {
+        val now = System.currentTimeMillis()
+        if (isPlayingAdhan.get() && (now - lastPlayTimestamp < 60_000L)) {
+            Log.w("AdhanForegroundService", "Adhan playback already in progress within 60s, ignoring duplicate call")
+            return
+        }
+        isPlayingAdhan.set(true)
+        lastPlayTimestamp = now
+
         try {
             requestAudioFocus()
 
@@ -210,13 +219,16 @@ class AdhanForegroundService : Service(), SensorEventListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val builder = NotificationCompat.Builder(this, SakinahApplication.CHANNEL_ID_ADHAN_URGENT)
+        val builder = NotificationCompat.Builder(this, SakinahApplication.CHANNEL_ID_ADHAN_SILENT_V5)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("حان الآن موعد أذان $prayerName 🕌")
             .setContentText("صوت: ${muadhin.name} • اضغط للإيقاف أو اقلب الهاتف لكتم الصوت")
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setSound(null)
+            .setSilent(true)
+            .setOnlyAlertOnce(true)
             .setContentIntent(fullScreenPendingIntent)
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .setOngoing(true)
@@ -227,6 +239,7 @@ class AdhanForegroundService : Service(), SensorEventListener {
     }
 
     private fun stopAdhan() {
+        isPlayingAdhan.set(false)
         try {
             sensorManager?.unregisterListener(this)
         } catch (e: Exception) {
@@ -241,6 +254,18 @@ class AdhanForegroundService : Service(), SensorEventListener {
             e.printStackTrace()
         } finally {
             mediaPlayer = null
+        }
+        try {
+            val dismissIntent = Intent(ACTION_DISMISS_ADHAN_ALERT).setPackage(packageName)
+            sendBroadcast(dismissIntent)
+        } catch (e: Exception) {
+            Log.e("AdhanForegroundService", "Failed to broadcast dismiss alert", e)
+        }
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            nm?.cancel(NOTIFICATION_ID)
+        } catch (e: Exception) {
+            Log.e("AdhanForegroundService", "Failed to cancel notification", e)
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -257,7 +282,12 @@ class AdhanForegroundService : Service(), SensorEventListener {
     companion object {
         const val NOTIFICATION_ID = 2001
         const val ACTION_STOP_ADHAN = "com.sakinah.app.ACTION_STOP_ADHAN"
+        const val ACTION_DISMISS_ADHAN_ALERT = "com.sakinah.app.ACTION_DISMISS_ADHAN_ALERT"
         const val EXTRA_PRAYER_NAME = "extra_prayer_name"
         const val EXTRA_MUEZZIN_ID = "extra_muezzin_id"
+
+        private val isPlayingAdhan = AtomicBoolean(false)
+        @Volatile
+        private var lastPlayTimestamp: Long = 0L
     }
 }

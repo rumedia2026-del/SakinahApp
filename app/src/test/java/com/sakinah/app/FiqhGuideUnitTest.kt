@@ -26,21 +26,24 @@ class FiqhGuideUnitTest {
         val root = loadFiqhGuide()
         val chapters = root.getJSONArray("chapters")
 
-        assertEquals("Must contain exactly 5 mandatory chapters", 5, chapters.length())
+        assertTrue("Must contain at least 8 comprehensive chapters, found: ${chapters.length()}", chapters.length() >= 8)
 
         val expectedTitles = listOf(
+            "مبطلات الصلاة",
+            "الطهارة",
             "سجود السهو",
-            "صلاة المسافر",
-            "أحكام الطهارة والوضوء والمسح",
-            "أحكام المسبوق",
-            "أركان الصلاة وواجباتها وسننها"
+            "المسبوق",
+            "المسافر",
+            "الصيام",
+            "الزكاة",
+            "الأيمان"
         )
 
         for (i in 0 until chapters.length()) {
             val ch = chapters.getJSONObject(i)
             val title = ch.getString("title")
             val matched = expectedTitles.any { title.contains(it) }
-            assertTrue("Chapter title '$title' must match expected mandatory categories", matched)
+            assertTrue("Chapter title '$title' must match expected categories", matched)
             assertTrue("Chapter must have non-empty issues", ch.getJSONArray("issues").length() > 0)
         }
     }
@@ -94,6 +97,6 @@ class FiqhGuideUnitTest {
             }
         }
 
-        assertTrue("Fiqh guide must have at least 12 detailed issues, found $totalIssues", totalIssues >= 12)
+        assertTrue("Fiqh guide must have at least 60 detailed issues, found $totalIssues", totalIssues >= 60)
     }
 }

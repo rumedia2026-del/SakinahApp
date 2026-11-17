@@ -54,5 +54,17 @@ class AzkarRepository @Inject constructor(
         zikrDao.deleteCustomZikr(id)
     }
 
+    fun getAllAzkarFlow(): Flow<List<ZikrEntity>> = zikrDao.getAllAzkarFlow()
+
+    suspend fun getAllAzkar(): List<ZikrEntity> = zikrDao.getAllAzkar()
+
+    suspend fun saveZikr(zikr: ZikrEntity) {
+        zikrDao.insertZikr(zikr)
+    }
+
+    suspend fun deleteZikr(id: Int) {
+        zikrDao.deleteZikrById(id)
+    }
+
     suspend fun isDatabaseEmpty(): Boolean = categoryDao.getCount() == 0
 }

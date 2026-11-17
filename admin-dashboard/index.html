@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم سكينة السحابية | Sakinah Admin Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: {
+                            850: '#0b3528',
+                            900: '#07241b',
+                            950: '#041610'
+                        },
+                        gold: {
+                            400: '#e5c46d',
+                            500: '#c8a951',
+                            600: '#b08f3b'
+                        }
+                    },
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                        quran: ['Amiri', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        .font-quran { font-family: 'Amiri', serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #c8a951; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900/90 backdrop-blur border-b border-emerald-900/40 sticky top-0 z-40 px-4 lg:px-8 py-3.5">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-800 flex items-center justify-center text-gold-400 font-extrabold text-xl shadow-lg border border-gold-500/30">
+                    س
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                        لوحة تحكم سكينة السحابية
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gold-500/10 text-gold-400 border border-gold-500/30">OTA Sync</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">إدارة محتوى الأذكار والتلاوات والفقه العملي</p>
+                </div>
+            </div>
+
+            <!-- GitHub Repo & Token Info -->
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 text-xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-slate-300 font-mono">rumedia2026-del/SakinahApp</span>
+                    <span class="text-slate-500">•</span>
+                    <span class="text-gold-400 font-mono">main</span>
+                </div>
+                <button onclick="openTokenModal()" id="tokenBtn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-900/60 hover:bg-emerald-800 border border-emerald-700/60 text-emerald-200 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                    <span id="tokenStatusText">إعداد توكن GitHub</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto w-full flex-1 p-4 lg:p-8 flex flex-col gap-6">
+
+        <!-- Status & Sync Alert Banner -->
+        <div id="syncAlert" class="hidden rounded-xl p-4 border flex items-center justify-between transition-all">
+            <div class="flex items-center gap-3">
+                <span id="syncAlertIcon" class="text-xl"></span>
+                <span id="syncAlertMsg" class="text-sm font-medium"></span>
+            </div>
+            <button onclick="closeSyncAlert()" class="text-slate-400 hover:text-white text-sm">✕</button>
+        </div>
+
+        <!-- Dashboard Tabs -->
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+                <button onclick="switchTab('azkar')" id="tabBtn-azkar" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-emerald-800 text-white border border-emerald-600 transition shadow">
+                    📿 إدارة الأذكار (<span id="azkarCountBadge">0</span>)
+                </button>
+                <button onclick="switchTab('fiqh')" id="tabBtn-fiqh" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition">
+                    📖 دليل الفقه (<span id="fiqhCountBadge">0</span>)
+                </button>
+                <button onclick="switchTab('publish')" id="tabBtn-publish" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition">
+                    🚀 النشر السحابي (OTA)
+                </button>
+            </div>
+
+            <!-- Global Action Buttons -->
+            <div class="flex items-center gap-2">
+                <button onclick="fetchRemoteData()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    تحديث البيانات من GitHub
+                </button>
+                <button onclick="exportCurrentJson()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-gold-400 border border-slate-700 flex items-center gap-1.5 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    تصدير JSON
+                </button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- TAB 1: AZKAR MANAGEMENT -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="tab-azkar" class="flex flex-col gap-4">
+            <!-- Search & Filter Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                <div class="md:col-span-5 relative">
+                    <input type="text" id="azkarSearchInput" oninput="filterAzkar()" placeholder="ابحث في نص الذكر بدون تشكيل أو الكلمات المفتاحية..." class="w-full bg-slate-950 border border-slate-700 rounded-lg pr-9 pl-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-gold-500 focus:outline-none">
+                    <svg class="w-4 h-4 text-slate-500 absolute right-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <div class="md:col-span-4">
+                    <select id="azkarCategorySelect" onchange="filterAzkar()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-gold-500 focus:outline-none">
+                        <option value="all">جميع التصنيفات</option>
+                        <option value="1">أذكار الصباح (Category 1)</option>
+                        <option value="2">أذكار المساء (Category 2)</option>
+                        <option value="3">أذكار الاستيقاظ (Category 3)</option>
+                        <option value="4">أذكار النوم (Category 4)</option>
+                        <option value="5">أذكار بعد الصلاة (Category 5)</option>
+                        <option value="6">أذكار المسجد (Category 6)</option>
+                        <option value="7">أذكار الأذان (Category 7)</option>
+                        <option value="8">أذكار الوضوء (Category 8)</option>
+                        <option value="9">أذكار الطعام والشراب (Category 9)</option>
+                        <option value="10">أذكار الخروج والدخول (Category 10)</option>
+                        <option value="11">أدعية جامعة من القرآن والسنة (Category 11)</option>
+                        <option value="12">الرقية الشرعية (Category 12)</option>
+                    </select>
+                </div>
+                <div class="md:col-span-3 flex justify-end">
+                    <button onclick="openZikrModal(null)" class="w-full md:w-auto px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        إضافة ذكر جديد
+                    </button>
+                </div>
+            </div>
+
+            <!-- Azkar Table / List -->
+            <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-lg">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right text-sm">
+                        <thead class="bg-slate-800/80 text-slate-300 text-xs border-b border-slate-700">
+                            <tr>
+                                <th class="p-3 w-16 text-center">المعرف</th>
+                                <th class="p-3 w-32">القسم</th>
+                                <th class="p-3">نص الذكر</th>
+                                <th class="p-3 w-20 text-center">التكرار</th>
+                                <th class="p-3 w-32">رابط الصوت</th>
+                                <th class="p-3 w-28 text-center">إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="azkarTableBody" class="divide-y divide-slate-800 text-slate-200">
+                            <tr>
+                                <td colspan="6" class="text-center py-12 text-slate-500">جاري تحميل البيانات...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- TAB 2: FIQH GUIDE MANAGEMENT -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="tab-fiqh" class="hidden flex-col gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                <div class="md:col-span-6 relative">
+                    <input type="text" id="fiqhSearchInput" oninput="filterFiqh()" placeholder="ابحث في عنوان المسألة أو الحكم أو الدليل الشرعي..." class="w-full bg-slate-950 border border-slate-700 rounded-lg pr-9 pl-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-gold-500 focus:outline-none">
+                    <svg class="w-4 h-4 text-slate-500 absolute right-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <div class="md:col-span-6">
+                    <select id="fiqhChapterSelect" onchange="filterFiqh()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-gold-500 focus:outline-none">
+                        <option value="all">جميع الأبواب الفقهية</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-lg">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right text-sm">
+                        <thead class="bg-slate-800/80 text-slate-300 text-xs border-b border-slate-700">
+                            <tr>
+                                <th class="p-3 w-16 text-center">المعرف</th>
+                                <th class="p-3 w-36">الباب الفقهي</th>
+                                <th class="p-3">عنوان المسألة</th>
+                                <th class="p-3 w-36">الحكم الميسر</th>
+                                <th class="p-3 w-28 text-center">إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fiqhTableBody" class="divide-y divide-slate-800 text-slate-200">
+                            <tr>
+                                <td colspan="5" class="text-center py-12 text-slate-500">جاري تحميل مسائل الفقه...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- TAB 3: CLOUD OTA PUBLISH -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="tab-publish" class="hidden flex-col gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 flex flex-col gap-1">
+                    <span class="text-xs text-slate-400">إصدار المحتوى الحالي</span>
+                    <span id="currentContentVersion" class="text-2xl font-extrabold text-gold-400">v1</span>
+                    <span id="lastUpdatedDate" class="text-xs text-slate-500">آخر تحديث: 2026-11-17</span>
+                </div>
+                <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 flex flex-col gap-1">
+                    <span class="text-xs text-slate-400">عدد الأذكار المتاحة</span>
+                    <span id="summaryAzkarCount" class="text-2xl font-extrabold text-emerald-400">0</span>
+                    <span class="text-xs text-slate-500">مقسمة على 12 قسماً شاملاً</span>
+                </div>
+                <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 flex flex-col gap-1">
+                    <span class="text-xs text-slate-400">المسائل الفقهية المعتمدة</span>
+                    <span id="summaryFiqhCount" class="text-2xl font-extrabold text-blue-400">0</span>
+                    <span class="text-xs text-slate-500">مقسمة على 8 أبواب رئيسية</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 p-6 rounded-xl border border-emerald-900/60 flex flex-col gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">
+                        🚀
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-100">النشر السحابي المباشر عبر GitHub OTA</h3>
+                        <p class="text-xs text-slate-400">عند الضغط، سيتم رفع رقم الإصدار تلقائياً وعمل Commit وتحديث ملفات `remote_content/` في مستودع التطبيق.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">وصف التحديث (Commit Message):</label>
+                        <input type="text" id="publishCommitMsg" value="Update Sakinah OTA content: purified azkar and fiqh guide" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-gold-500 focus:outline-none">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="bumpVersionCheck" checked class="w-4 h-4 rounded text-emerald-600 bg-slate-950 border-slate-700">
+                        <label for="bumpVersionCheck" class="text-xs text-slate-300">زيادة رقم `contentVersion` تلقائياً بمقدار +1 لإشعار جميع أجهزة المستخدمين بالتحميل فوراً</label>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+                    <span id="publishStatus" class="text-xs text-slate-400">جاهز للنشر</span>
+                    <button onclick="publishToGitHub()" id="publishSubmitBtn" class="px-6 py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-bold shadow-lg transition flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        نشر التحديث فوراً على GitHub
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: GitHub Token Configuration -->
+    <div id="tokenModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                    🔑 إعداد GitHub Personal Access Token
+                </h3>
+                <button onclick="closeTokenModal()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+                يُحفظ التوكن حصرياً داخل متصفحك (`LocalStorage`) ولا يتم إرساله لأي جهة خارجية سوى لـ GitHub API الرسمية لنشر التحديثات.
+            </p>
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Personal Access Token (classic أو fine-grained مع صلاحية repo):</label>
+                <input type="password" id="ghTokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 font-mono focus:border-gold-500 focus:outline-none">
+            </div>
+            <div class="flex items-center justify-between pt-2">
+                <button onclick="clearToken()" class="text-xs text-rose-400 hover:underline">مسح التوكن</button>
+                <div class="flex gap-2">
+                    <button onclick="closeTokenModal()" class="px-4 py-1.5 rounded-lg text-xs bg-slate-800 text-slate-300 hover:bg-slate-700">إلغاء</button>
+                    <button onclick="saveToken()" class="px-4 py-1.5 rounded-lg text-xs bg-emerald-700 text-white font-bold hover:bg-emerald-600">حفظ وتأكيد</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit / Add Zikr -->
+    <div id="zikrModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 id="zikrModalTitle" class="text-base font-bold text-slate-100">تحرير الذكر</h3>
+                <button onclick="closeZikrModal()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            <input type="hidden" id="modalZikrId">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">القسم:</label>
+                    <select id="modalZikrCat" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200">
+                        <option value="1">أذكار الصباح (1)</option>
+                        <option value="2">أذكار المساء (2)</option>
+                        <option value="3">أذكار الاستيقاظ (3)</option>
+                        <option value="4">أذكار النوم (4)</option>
+                        <option value="5">أذكار بعد الصلاة (5)</option>
+                        <option value="6">أذكار المسجد (6)</option>
+                        <option value="7">أذكار الأذان (7)</option>
+                        <option value="8">أذكار الوضوء (8)</option>
+                        <option value="9">أذكار الطعام والشراب (9)</option>
+                        <option value="10">أذكار الخروج والدخول (10)</option>
+                        <option value="11">أدعية قرآنية ونبوية (11)</option>
+                        <option value="12">الرقية الشرعية (12)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">عدد التكرار:</label>
+                    <input type="number" id="modalZikrRepeat" value="1" min="1" max="1000" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">النص المشكول (بالتشكيل التام):</label>
+                <textarea id="modalZikrTashkeel" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 font-quran leading-relaxed"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">النص المبسط (بدون تشكيل للبحث):</label>
+                <textarea id="modalZikrPlain" rows="2" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200"></textarea>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">رابط الصوت (Audio URL):</label>
+                    <input type="text" id="modalZikrAudio" placeholder="https://..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">درجة الصحة والمصدر:</label>
+                    <input type="text" id="modalZikrGrade" placeholder="صحيح - حصن المسلم" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200">
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+                <button onclick="closeZikrModal()" class="px-4 py-2 rounded-lg text-xs bg-slate-800 text-slate-300 hover:bg-slate-700">إلغاء</button>
+                <button onclick="saveZikrModal()" class="px-5 py-2 rounded-lg text-xs bg-emerald-700 text-white font-bold hover:bg-emerald-600">حفظ التعديل</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // State
+        let azkarData = { azkar: [], categories: [] };
+        let fiqhData = { chapters: [] };
+        let versionData = { contentVersion: 1, lastUpdated: '2026-11-17', description: '' };
+        let githubShaMap = {};
+
+        const REPO = 'rumedia2026-del/SakinahApp';
+        const BRANCH = 'main';
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            initToken();
+            loadInitialData();
+        });
+
+        function initToken() {
+            const token = localStorage.getItem('sakinah_gh_token');
+            const tokenBtn = document.getElementById('tokenBtn');
+            const tokenStatusText = document.getElementById('tokenStatusText');
+            if (token) {
+                tokenStatusText.innerText = 'التوكن محفوظ ✓';
+                tokenBtn.classList.remove('bg-emerald-900/60', 'text-emerald-200');
+                tokenBtn.classList.add('bg-emerald-700', 'text-white');
+            } else {
+                tokenStatusText.innerText = 'إعداد توكن GitHub';
+            }
+        }
+
+        function openTokenModal() {
+            document.getElementById('ghTokenInput').value = localStorage.getItem('sakinah_gh_token') || '';
+            document.getElementById('tokenModal').classList.remove('hidden');
+        }
+
+        function closeTokenModal() {
+            document.getElementById('tokenModal').classList.add('hidden');
+        }
+
+        function saveToken() {
+            const val = document.getElementById('ghTokenInput').value.trim();
+            if (val) {
+                localStorage.setItem('sakinah_gh_token', val);
+                showAlert('تم حفظ توكن GitHub بنجاح في متصفحك', 'success');
+            }
+            initToken();
+            closeTokenModal();
+        }
+
+        function clearToken() {
+            localStorage.removeItem('sakinah_gh_token');
+            document.getElementById('ghTokenInput').value = '';
+            initToken();
+            closeTokenModal();
+            showAlert('تم مسح التوكن من المتصفح', 'info');
+        }
+
+        function showAlert(msg, type = 'info') {
+            const banner = document.getElementById('syncAlert');
+            const text = document.getElementById('syncAlertMsg');
+            const icon = document.getElementById('syncAlertIcon');
+            banner.className = 'rounded-xl p-4 border flex items-center justify-between transition-all ' +
+                (type === 'success' ? 'bg-emerald-950/80 border-emerald-600 text-emerald-200' :
+                 type === 'error' ? 'bg-rose-950/80 border-rose-600 text-rose-200' :
+                 'bg-slate-900 border-slate-700 text-slate-200');
+            icon.innerText = type === 'success' ? '✓' : type === 'error' ? '⚠' : 'ℹ';
+            text.innerText = msg;
+            banner.classList.remove('hidden');
+            setTimeout(() => { banner.classList.add('hidden'); }, 7000);
+        }
+
+        function closeSyncAlert() {
+            document.getElementById('syncAlert').classList.add('hidden');
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.className = 'tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition';
+            });
+            document.getElementById('tab-azkar').classList.add('hidden');
+            document.getElementById('tab-fiqh').classList.add('hidden');
+            document.getElementById('tab-publish').classList.add('hidden');
+
+            const activeBtn = document.getElementById('tabBtn-' + tab);
+            activeBtn.className = 'tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-emerald-800 text-white border border-emerald-600 transition shadow';
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+        }
+
+        // Data Fetching
+        async function loadInitialData() {
+            // First try loading local static files, then fallback to GitHub Raw
+            try {
+                const [azkarRes, fiqhRes, verRes] = await Promise.all([
+                    fetch('../remote_content/azkar_seed.json').catch(() => null),
+                    fetch('../remote_content/fiqh_guide.json').catch(() => null),
+                    fetch('../remote_content/version.json').catch(() => null)
+                ]);
+
+                if (azkarRes && azkarRes.ok) {
+                    azkarData = await azkarRes.json();
+                }
+                if (fiqhRes && fiqhRes.ok) {
+                    fiqhData = await fiqhRes.json();
+                }
+                if (verRes && verRes.ok) {
+                    versionData = await verRes.json();
+                }
+            } catch (e) {
+                console.log('Local files load failed, attempting GitHub raw fetch...');
+            }
+
+            if (!azkarData.azkar || azkarData.azkar.length === 0) {
+                await fetchRemoteData();
+            } else {
+                renderAll();
+            }
+        }
+
+        async function fetchRemoteData() {
+            showAlert('جاري جلب أحدث محتوى من مستودع GitHub...', 'info');
+            try {
+                const token = localStorage.getItem('sakinah_gh_token');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+                const [azkarR, fiqhR, verR] = await Promise.all([
+                    fetch(`https://raw.githubusercontent.com/${REPO}/${BRANCH}/remote_content/azkar_seed.json?t=` + Date.now()),
+                    fetch(`https://raw.githubusercontent.com/${REPO}/${BRANCH}/remote_content/fiqh_guide.json?t=` + Date.now()),
+                    fetch(`https://raw.githubusercontent.com/${REPO}/${BRANCH}/remote_content/version.json?t=` + Date.now())
+                ]);
+
+                if (azkarR.ok) azkarData = await azkarR.json();
+                if (fiqhR.ok) fiqhData = await fiqhR.json();
+                if (verR.ok) versionData = await verR.json();
+
+                renderAll();
+                showAlert('تم جلب البيانات بنجاح من GitHub!', 'success');
+            } catch (err) {
+                showAlert('فشل في جلب البيانات من GitHub: ' + err.message, 'error');
+            }
+        }
+
+        function renderAll() {
+            renderAzkarTable();
+            renderFiqhTable();
+            renderPublishSummary();
+        }
+
+        function renderPublishSummary() {
+            document.getElementById('currentContentVersion').innerText = 'v' + (versionData.contentVersion || 1);
+            document.getElementById('lastUpdatedDate').innerText = 'آخر تحديث: ' + (versionData.lastUpdated || '2026-11-17');
+            document.getElementById('summaryAzkarCount').innerText = azkarData.azkar ? azkarData.azkar.length : 0;
+            let totalIssues = 0;
+            if (fiqhData.chapters) {
+                fiqhData.chapters.forEach(c => totalIssues += (c.issues ? c.issues.length : 0));
+            }
+            document.getElementById('summaryFiqhCount').innerText = totalIssues;
+            document.getElementById('azkarCountBadge').innerText = azkarData.azkar ? azkarData.azkar.length : 0;
+            document.getElementById('fiqhCountBadge').innerText = totalIssues;
+        }
+
+        // Azkar Rendering & Filtering
+        function renderAzkarTable() {
+            const tbody = document.getElementById('azkarTableBody');
+            const items = getFilteredAzkar();
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">لا توجد نتائج مطابقة</td></tr>';
+                return;
+            }
+
+            const catMap = {
+                1: 'أذكار الصباح', 2: 'أذكار المساء', 3: 'الاستيقاظ', 4: 'النوم',
+                5: 'بعد الصلاة', 6: 'المسجد', 7: 'الأذان', 8: 'الوضوء',
+                9: 'الطعام', 10: 'الخروج والدخول', 11: 'أدعية جامعة', 12: 'الرقية الشرعية'
+            };
+
+            tbody.innerHTML = items.map(z => `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-3 text-center font-mono text-xs text-slate-400">${z.id}</td>
+                    <td class="p-3 text-xs font-semibold text-emerald-400">${catMap[z.categoryId] || 'قسم ' + z.categoryId}</td>
+                    <td class="p-3">
+                        <div class="font-quran text-base text-slate-100 leading-relaxed">${z.textWithTashkeel}</div>
+                        <div class="text-xs text-slate-400 mt-1 line-clamp-1">${z.textPlain}</div>
+                    </td>
+                    <td class="p-3 text-center">
+                        <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${z.repeatCount > 1 ? 'bg-gold-500/20 text-gold-400 border border-gold-500/30' : 'bg-slate-800 text-slate-300'}">
+                            ${z.repeatCount}×
+                        </span>
+                    </td>
+                    <td class="p-3 text-xs text-slate-400">
+                        ${z.audioUrl ? `<a href="${z.audioUrl}" target="_blank" class="text-blue-400 hover:underline flex items-center gap-1">▶ استمع</a>` : '<span class="text-slate-600">بدون</span>'}
+                    </td>
+                    <td class="p-3 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="editZikr(${z.id})" class="p-1.5 text-slate-400 hover:text-gold-400 hover:bg-slate-800 rounded transition" title="تعديل">
+                                ✏️
+                            </button>
+                            <button onclick="deleteZikr(${z.id})" class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition" title="حذف">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getFilteredAzkar() {
+            if (!azkarData.azkar) return [];
+            const query = (document.getElementById('azkarSearchInput').value || '').trim().toLowerCase();
+            const cat = document.getElementById('azkarCategorySelect').value;
+
+            return azkarData.azkar.filter(z => {
+                if (cat !== 'all' && z.categoryId !== parseInt(cat)) return false;
+                if (!query) return true;
+                const plain = (z.textPlain || '').toLowerCase();
+                const tash = (z.textWithTashkeel || '').toLowerCase();
+                return plain.includes(query) || tash.includes(query);
+            });
+        }
+
+        function filterAzkar() {
+            renderAzkarTable();
+        }
+
+        // Zikr Modal & CRUD
+        function openZikrModal(zikr) {
+            document.getElementById('modalZikrId').value = zikr ? zikr.id : '';
+            document.getElementById('zikrModalTitle').innerText = zikr ? `تعديل الذكر (#${zikr.id})` : 'إضافة ذكر جديد';
+            document.getElementById('modalZikrCat').value = zikr ? zikr.categoryId : 1;
+            document.getElementById('modalZikrRepeat').value = zikr ? zikr.repeatCount : 1;
+            document.getElementById('modalZikrTashkeel').value = zikr ? zikr.textWithTashkeel : '';
+            document.getElementById('modalZikrPlain').value = zikr ? zikr.textPlain : '';
+            document.getElementById('modalZikrAudio').value = zikr && zikr.audioUrl ? zikr.audioUrl : '';
+            document.getElementById('modalZikrGrade').value = zikr ? (zikr.authenticityGrade || '') : 'صحيح';
+
+            document.getElementById('zikrModal').classList.remove('hidden');
+        }
+
+        function closeZikrModal() {
+            document.getElementById('zikrModal').classList.add('hidden');
+        }
+
+        function editZikr(id) {
+            const item = azkarData.azkar.find(z => z.id === id);
+            if (item) openZikrModal(item);
+        }
+
+        function deleteZikr(id) {
+            if (!confirm(`هل أنت متأكد من حذف الذكر #${id}؟`)) return;
+            azkarData.azkar = azkarData.azkar.filter(z => z.id !== id);
+            renderAll();
+            showAlert(`تم حذف الذكر #${id} محلياً. اضغط نشر لحفظه على GitHub.`, 'info');
+        }
+
+        function saveZikrModal() {
+            const idVal = document.getElementById('modalZikrId').value;
+            const catId = parseInt(document.getElementById('modalZikrCat').value);
+            const repeat = parseInt(document.getElementById('modalZikrRepeat').value) || 1;
+            const tashkeel = document.getElementById('modalZikrTashkeel').value.trim();
+            const plain = document.getElementById('modalZikrPlain').value.trim();
+            const audio = document.getElementById('modalZikrAudio').value.trim() || null;
+            const grade = document.getElementById('modalZikrGrade').value.trim() || 'صحيح';
+
+            if (!plain && !tashkeel) {
+                alert('يرجى إدخال نص الذكر');
+                return;
+            }
+
+            if (idVal) {
+                const zId = parseInt(idVal);
+                const idx = azkarData.azkar.findIndex(z => z.id === zId);
+                if (idx !== -1) {
+                    azkarData.azkar[idx] = {
+                        ...azkarData.azkar[idx],
+                        categoryId: catId,
+                        repeatCount: repeat,
+                        textWithTashkeel: tashkeel || plain,
+                        textPlain: plain || tashkeel,
+                        audioUrl: audio,
+                        authenticityGrade: grade
+                    };
+                }
+            } else {
+                const newId = (azkarData.azkar.reduce((max, z) => Math.max(max, z.id), 1000)) + 1;
+                azkarData.azkar.push({
+                    id: newId,
+                    categoryId: catId,
+                    repeatCount: repeat,
+                    textWithTashkeel: tashkeel || plain,
+                    textPlain: plain || tashkeel,
+                    audioUrl: audio,
+                    authenticityGrade: grade,
+                    isUserCustom: false,
+                    isFavorite: false
+                });
+            }
+
+            closeZikrModal();
+            renderAll();
+            showAlert('تم حفظ التعديل بنجاح!', 'success');
+        }
+
+        // Fiqh Rendering
+        function renderFiqhTable() {
+            const tbody = document.getElementById('fiqhTableBody');
+            const select = document.getElementById('fiqhChapterSelect');
+            if (fiqhData.chapters && select.options.length <= 1) {
+                select.innerHTML = '<option value="all">جميع الأبواب الفقهية</option>' +
+                    fiqhData.chapters.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+            }
+
+            const issues = getFilteredFiqh();
+            if (issues.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-500">لا توجد مسائل فقهية مطابقة</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = issues.map(issue => `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-3 text-center font-mono text-xs text-slate-400">${issue.id}</td>
+                    <td class="p-3 text-xs font-semibold text-blue-400">${issue.chapterTitle}</td>
+                    <td class="p-3 font-semibold text-slate-100">${issue.title}</td>
+                    <td class="p-3 text-xs text-emerald-300">${issue.ruling}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="alert('حكم المسألة:\\n' + '${issue.ruling.replace(/'/g, "\\'")}' + '\\n\\nالدليل:\\n' + '${issue.evidence.replace(/'/g, "\\'")}')" class="px-2.5 py-1 rounded text-xs bg-slate-800 text-slate-300 hover:text-gold-400">
+                            عرض التفاصيل
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getFilteredFiqh() {
+            if (!fiqhData.chapters) return [];
+            const query = (document.getElementById('fiqhSearchInput').value || '').trim().toLowerCase();
+            const chap = document.getElementById('fiqhChapterSelect').value;
+
+            const all = [];
+            fiqhData.chapters.forEach(c => {
+                if (chap !== 'all' && c.id !== parseInt(chap)) return;
+                if (c.issues) {
+                    c.issues.forEach(i => all.push({ ...i, chapterTitle: c.title }));
+                }
+            });
+
+            if (!query) return all;
+            return all.filter(i => (i.title + ' ' + i.ruling + ' ' + i.evidence).toLowerCase().includes(query));
+        }
+
+        function filterFiqh() {
+            renderFiqhTable();
+        }
+
+        // Export JSON
+        function exportCurrentJson() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(azkarData, null, 2));
+            const dl = document.createElement('a');
+            dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", `sakinah_azkar_seed_v${versionData.contentVersion || 1}.json`);
+            dl.click();
+        }
+
+        // Publish to GitHub OTA via REST API
+        async function publishToGitHub() {
+            const token = localStorage.getItem('sakinah_gh_token');
+            if (!token) {
+                openTokenModal();
+                alert('يرجى إدخال Personal Access Token للتمكن من النشر على المستودع');
+                return;
+            }
+
+            const commitMsg = document.getElementById('publishCommitMsg').value.trim() || 'Update Sakinah OTA Content';
+            const bump = document.getElementById('bumpVersionCheck').checked;
+            const btn = document.getElementById('publishSubmitBtn');
+            const status = document.getElementById('publishStatus');
+
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            status.innerText = 'جاري النشر عبر GitHub API...';
+
+            try {
+                if (bump) {
+                    versionData.contentVersion = (versionData.contentVersion || 1) + 1;
+                    versionData.lastUpdated = new Date().toISOString().split('T')[0];
+                }
+
+                // Helper to commit file
+                async function commitFile(path, contentObj) {
+                    const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(contentObj, null, 2))));
+                    const url = `https://api.github.com/repos/${REPO}/contents/${path}`;
+
+                    // Get current file sha
+                    const getRes = await fetch(url, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+
+                    let sha = undefined;
+                    if (getRes.ok) {
+                        const json = await getRes.json();
+                        sha = json.sha;
+                    }
+
+                    const putRes = await fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/vnd.github.v3+json'
+                        },
+                        body: JSON.stringify({
+                            message: commitMsg + ` [OTA v${versionData.contentVersion}]`,
+                            content: contentBase64,
+                            sha: sha,
+                            branch: BRANCH
+                        })
+                    });
+
+                    if (!putRes.ok) {
+                        const errData = await putRes.json();
+                        throw new Error(`خطأ في رفع ${path}: ${errData.message || putRes.statusText}`);
+                    }
+                }
+
+                // 1. Commit azkar_seed.json
+                status.innerText = 'رفع remote_content/azkar_seed.json...';
+                await commitFile('remote_content/azkar_seed.json', azkarData);
+
+                // 2. Commit fiqh_guide.json
+                status.innerText = 'رفع remote_content/fiqh_guide.json...';
+                await commitFile('remote_content/fiqh_guide.json', fiqhData);
+
+                // 3. Commit version.json
+                status.innerText = 'رفع remote_content/version.json...';
+                await commitFile('remote_content/version.json', versionData);
+
+                status.innerText = `تم النشر بنجاح! الإصدار الجديد: v${versionData.contentVersion}`;
+                showAlert(`تم نشر التحديث بنجاح إلى GitHub OTA! الإصدار الآن: v${versionData.contentVersion}`, 'success');
+                renderPublishSummary();
+            } catch (err) {
+                status.innerText = 'فشل النشر: ' + err.message;
+                showAlert('فشل النشر: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+            }
+        }
+    </script>
+</body>
+</html>

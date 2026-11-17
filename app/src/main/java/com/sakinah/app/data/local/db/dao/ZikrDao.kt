@@ -44,6 +44,15 @@ interface ZikrDao {
     @Query("DELETE FROM azkar WHERE id = :id AND isUserCustom = 1")
     suspend fun deleteCustomZikr(id: Int)
 
+    @Query("SELECT * FROM azkar ORDER BY id ASC")
+    fun getAllAzkarFlow(): Flow<List<ZikrEntity>>
+
+    @Query("SELECT * FROM azkar ORDER BY id ASC")
+    suspend fun getAllAzkar(): List<ZikrEntity>
+
+    @Query("DELETE FROM azkar WHERE id = :id")
+    suspend fun deleteZikrById(id: Int)
+
     @Query("SELECT COUNT(*) FROM azkar")
     suspend fun getCount(): Int
 }

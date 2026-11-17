@@ -186,7 +186,15 @@ fun SakinahNavGraph(startDestination: String = Screen.Home.route) {
             composable(Screen.Settings.route) {
                 SettingsScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onOpenAdhanSettings = { navController.navigate(Screen.AdhanSettings.route) }
+                    onOpenAdhanSettings = { navController.navigate(Screen.AdhanSettings.route) },
+                    onOpenAdminDashboard = { navController.navigate(Screen.AdminDashboard.route) }
+                )
+            }
+
+            // ── لوحة تحكم المشرف والمطورين (Admin Dashboard) ──
+            composable(Screen.AdminDashboard.route) {
+                com.sakinah.app.feature.admin.AdminDashboardScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
         }

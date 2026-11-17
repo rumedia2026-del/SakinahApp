@@ -30,7 +30,7 @@ import java.io.InputStreamReader
         DailyProgressEntity::class,
         MunajatEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class SakinahDatabase : RoomDatabase() {
@@ -46,8 +46,8 @@ abstract class SakinahDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: SakinahDatabase? = null
 
-        val MIGRATIONS: Array<Migration> = (1..9).map { startVersion ->
-            object : Migration(startVersion, 10) {
+        val MIGRATIONS: Array<Migration> = (1..10).map { startVersion ->
+            object : Migration(startVersion, 11) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL(
                         """
@@ -74,6 +74,7 @@ abstract class SakinahDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addMigrations(*MIGRATIONS)
+                    .fallbackToDestructiveMigration()
                     .addCallback(SakinahDatabaseCallback(context.applicationContext, scope))
                     .build()
                 INSTANCE = instance

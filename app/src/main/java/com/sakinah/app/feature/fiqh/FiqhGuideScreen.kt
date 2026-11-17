@@ -71,6 +71,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sakinah.app.R
+import com.sakinah.app.core.utils.ArabicNormalizer
+import com.sakinah.app.core.utils.normalizeArabicForSearch
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -179,10 +181,13 @@ fun FiqhGuideScreen(
         allIssues.filter { issue ->
             val matchChapter = (selectedChapterId == 0 || issue.chapterId == selectedChapterId)
             val matchSearch = if (searchQuery.isBlank()) true else {
-                issue.title.contains(searchQuery, ignoreCase = true) ||
-                        issue.ruling.contains(searchQuery, ignoreCase = true) ||
-                        issue.evidence.contains(searchQuery, ignoreCase = true) ||
-                        issue.chapterTitle.contains(searchQuery, ignoreCase = true)
+                val nq = searchQuery.normalizeArabicForSearch()
+                issue.title.normalizeArabicForSearch().contains(nq) ||
+                        issue.ruling.normalizeArabicForSearch().contains(nq) ||
+                        issue.evidence.normalizeArabicForSearch().contains(nq) ||
+                        issue.chapterTitle.normalizeArabicForSearch().contains(nq) ||
+                        issue.madhabSummary.normalizeArabicForSearch().contains(nq) ||
+                        ArabicNormalizer.matchesSmart(issue.title, searchQuery)
             }
             matchChapter && matchSearch
         }

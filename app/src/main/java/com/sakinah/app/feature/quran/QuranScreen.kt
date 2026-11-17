@@ -844,7 +844,289 @@ fun QuranScreen(
                         }
                     }
 
-                    if (uiState.selectedFilterTab == "JUZ") {
+                    if (uiState.searchQuery.isNotBlank()) {
+                        // 1. الانتقال السريع المباشر برقم الصفحة (1..604)
+                        val quickJumpPage = uiState.matchedPageNumber
+                        if (quickJumpPage != null) {
+                            item(key = "quick_jump_page") {
+                                Card(
+                                    shape = MaterialTheme.shapes.medium,
+                                    colors = CardDefaults.cardColors(containerColor = goldAccent.copy(alpha = 0.15f)),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .clickable {
+                                            viewModel.openPage(quickJumpPage)
+                                            haptic.tick()
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.AutoStories, contentDescription = null, tint = goldAccent)
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(
+                                                text = "انتقل مباشرة إلى صفحة ${toArabicDigits(quickJumpPage)} في المصحف",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        Text("فتح ↗", color = goldAccent, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. الانتقال المباشر برقم الجزء
+                        val quickJumpJuz = uiState.matchedJuz
+                        if (quickJumpJuz != null) {
+                            item(key = "quick_jump_juz") {
+                                Card(
+                                    shape = MaterialTheme.shapes.medium,
+                                    colors = CardDefaults.cardColors(containerColor = emeraldPrimary.copy(alpha = 0.12f)),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .clickable {
+                                            viewModel.openPage(quickJumpJuz.startPage)
+                                            haptic.tick()
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.School, contentDescription = null, tint = emeraldPrimary)
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column {
+                                                Text(
+                                                    text = quickJumpJuz.name,
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    text = "يبدأ من ${quickJumpJuz.startSurahName} (ص ${toArabicDigits(quickJumpJuz.startPage)})",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                        Text("فتح ↗", color = emeraldPrimary, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3. السور الـ 114 المطابقة للبحث بدون تشكيل
+                        if (uiState.filteredSurahs.isNotEmpty()) {
+                            item(key = "search_surahs_header") {
+                                Text(
+                                    text = "السور المطابقة (${toArabicDigits(uiState.filteredSurahs.size)} سورة)",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+
+                            items(
+                                items = uiState.filteredSurahs,
+                                key = { "search_surah_${it.number}" }
+                            ) { surah ->
+                                val isDownloaded = uiState.downloadedSurahs.contains(surah.number)
+                                val isDownloading = (uiState.downloadingSurahNumber == surah.number)
+                                val isThisSurahPlaying = (isAudioPlaying && currentlyPlayingSurah == surah.number)
+                                val isThisSurahBuffering = (isBuffering && currentlyPlayingSurah == surah.number)
+
+                                Card(
+                                    shape = MaterialTheme.shapes.medium,
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable {
+                                                    viewModel.openPage(surah.startPage)
+                                                    haptic.tick()
+                                                }
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .clip(CircleShape)
+                                                    .background(goldAccent.copy(alpha = 0.15f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = toArabicDigits(surah.number),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = goldAccent
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column {
+                                                Text(
+                                                    text = surah.name,
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(
+                                                        text = "${surah.revelationType} • ${toArabicDigits(surah.numberOfAyahs)} آية",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        text = "• ص ${toArabicDigits(surah.startPage)}",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = goldAccent,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            IconButton(
+                                                onClick = {
+                                                    if (isThisSurahPlaying) {
+                                                        sheikhPlayer.stop()
+                                                    } else {
+                                                        sheikhPlayer.playSurah(uiState.selectedSheikhId, surah.number, surah.name)
+                                                    }
+                                                }
+                                            ) {
+                                                if (isThisSurahBuffering) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(20.dp),
+                                                        strokeWidth = 2.dp,
+                                                        color = emeraldPrimary
+                                                    )
+                                                } else {
+                                                    Icon(
+                                                        imageVector = if (isThisSurahPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                        contentDescription = "استماع",
+                                                        tint = if (isThisSurahPlaying) goldAccent else emeraldPrimary
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 4. مطابقة الآيات القرآنية (6236 آية) بالكلمة والعبارة بدون تشكيل
+                        if (uiState.matchedAyahs.isNotEmpty()) {
+                            item(key = "search_ayahs_header") {
+                                Text(
+                                    text = "الآيات القرآنية المطابقة (${toArabicDigits(uiState.matchedAyahs.size)} آية)",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+
+                            items(
+                                items = uiState.matchedAyahs,
+                                key = { "search_ayah_${it.number}" }
+                            ) { ayah ->
+                                Card(
+                                    shape = MaterialTheme.shapes.medium,
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .clickable {
+                                            viewModel.openPage(ayah.page)
+                                            haptic.tick()
+                                        }
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(14.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "${ayah.surahName} • آية ${toArabicDigits(ayah.numberInSurah)}",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = emeraldPrimary
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(MaterialTheme.shapes.extraSmall)
+                                                    .background(goldAccent.copy(alpha = 0.15f))
+                                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = "صفحة ${toArabicDigits(ayah.page)}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = goldAccent
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = ayah.text,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            lineHeight = 24.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        if (uiState.filteredSurahs.isEmpty() && uiState.matchedAyahs.isEmpty() && uiState.matchedPageNumber == null && uiState.matchedJuz == null) {
+                            item(key = "no_search_results") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "لم يتم العثور على سور أو آيات تطابق «${uiState.searchQuery}»",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    } else if (uiState.selectedFilterTab == "JUZ") {
                         // عرض فهرس الأجزاء الـ 30
                         item(key = "juz_header") {
                             Text(

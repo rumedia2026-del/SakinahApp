@@ -3,6 +3,8 @@ package com.sakinah.app.feature.quran
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sakinah.app.core.utils.ArabicNormalizer
+import com.sakinah.app.core.utils.normalizeArabicForSearch
 import com.sakinah.app.feature.quran.audio.QuranAudioDownloader
 import com.sakinah.app.feature.quran.audio.QuranSheikhManager
 import com.sakinah.app.feature.quran.model.AyahItem
@@ -20,6 +22,9 @@ import javax.inject.Inject
 data class QuranUiState(
     val surahs: List<SurahHeader> = emptyList(),
     val filteredSurahs: List<SurahHeader> = emptyList(),
+    val matchedAyahs: List<AyahItem> = emptyList(),
+    val matchedPageNumber: Int? = null,
+    val matchedJuz: JuzItem? = null,
     val currentAyahs: List<AyahItem> = emptyList(),
     val selectedSurah: SurahHeader? = null,
     val selectedAyahForTafsir: AyahItem? = null,
@@ -48,6 +53,8 @@ class QuranViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(QuranUiState(isLoading = true))
     val uiState: StateFlow<QuranUiState> = _uiState.asStateFlow()
 
+    private var allAyahsCache: List<AyahItem> = emptyList()
+
     init {
         loadData()
     }
@@ -58,6 +65,8 @@ class QuranViewModel @Inject constructor(
             val list = quranRepository.getSurahsList()
             val allPages = quranRepository.getAllPages()
             val juzList = quranRepository.getJuzList()
+            val allAyahs = quranRepository.getAllAyahs()
+            allAyahsCache = allAyahs
             _uiState.value = _uiState.value.copy(
                 surahs = list,
                 filteredSurahs = list,
@@ -80,7 +89,7 @@ class QuranViewModel @Inject constructor(
     }
 
     private fun applyFilters() {
-        val query = _uiState.value.searchQuery.trim()
+        val rawQuery = _uiState.value.searchQuery.trim()
         val tab = _uiState.value.selectedFilterTab
         val downloaded = _uiState.value.downloadedSurahs
 
@@ -93,16 +102,51 @@ class QuranViewModel @Inject constructor(
             else -> base
         }
 
-        val filtered = if (query.isBlank()) {
-            base
-        } else {
-            base.filter {
-                it.name.contains(query, ignoreCase = true) ||
-                        it.englishName.contains(query, ignoreCase = true) ||
-                        it.number.toString() == query
-            }
+        if (rawQuery.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                filteredSurahs = base,
+                matchedAyahs = emptyList(),
+                matchedPageNumber = null,
+                matchedJuz = null
+            )
+            return
         }
-        _uiState.value = _uiState.value.copy(filteredSurahs = filtered)
+
+        // 1. الانتقال المباشر برقم الصفحة (1..604)
+        val pageNum = rawQuery.toIntOrNull()?.takeIf { it in 1..604 }
+
+        // 2. الانتقال المباشر برقم الجزء (1..30 أو "جزء 15")
+        val normQuery = rawQuery.normalizeArabicForSearch()
+        val juzMatch = _uiState.value.juzList.firstOrNull { juz ->
+            val normJuzName = juz.name.normalizeArabicForSearch()
+            normJuzName.contains(normQuery) ||
+                    rawQuery == juz.number.toString() && (rawQuery.toIntOrNull() in 1..30) ||
+                    normQuery == "جزء ${juz.number}" ||
+                    normQuery == "الجزء ${juz.number}"
+        }
+
+        // 3. مطابقة السور الـ 114 بمرونة وبدون تشكيل
+        val filtered = base.filter { surah ->
+            ArabicNormalizer.matchesSmart(surah.name, rawQuery) ||
+                    surah.englishName.contains(rawQuery, ignoreCase = true) ||
+                    surah.number.toString() == rawQuery
+        }
+
+        // 4. البحث داخل نصوص الآيات كلها (6236 آية) بدون تشكيل
+        val matchedAyahs = if (normQuery.length >= 2) {
+            allAyahsCache.filter { ayah ->
+                ayah.text.normalizeArabicForSearch().contains(normQuery)
+            }.take(50)
+        } else {
+            emptyList()
+        }
+
+        _uiState.value = _uiState.value.copy(
+            filteredSurahs = filtered,
+            matchedAyahs = matchedAyahs,
+            matchedPageNumber = pageNum,
+            matchedJuz = juzMatch
+        )
     }
 
     fun openSurah(surah: SurahHeader) {

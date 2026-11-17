@@ -18,3 +18,4 @@ lint/outputs/
 lint/tmp/
 build_output/
 *.apk
+scratch/

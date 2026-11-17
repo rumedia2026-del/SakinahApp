@@ -61,6 +61,9 @@ sealed class Screen(val route: String) {
 
     /** دليل الفقه العملي الميسر */
     data object FiqhGuide : Screen("fiqh_guide")
+
+    /** لوحة تحكم المطورين والمشرفين السرية */
+    data object AdminDashboard : Screen("admin_dashboard")
 }
 
 /** عناصر شريط التنقل السفلي */

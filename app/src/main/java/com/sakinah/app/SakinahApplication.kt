@@ -51,8 +51,9 @@ class SakinahApplication : Application(), Configuration.Provider {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
 
-            // حذف القناة القديمة لضمان تطبيق الإعدادات العاجلة الجديدة
+            // حذف القنوات القديمة لضمان عدم تداخل الأصوات نهائياً
             manager.deleteNotificationChannel("sakinah_adhan_channel")
+            manager.deleteNotificationChannel("sakinah_adhan_urgent_v4")
 
             val azkarChannel = NotificationChannel(
                 CHANNEL_ID_AZKAR,
@@ -75,15 +76,15 @@ class SakinahApplication : Application(), Configuration.Provider {
                 setShowBadge(false)
             }
 
-            // القناة العاجلة الجديدة للأذان بدون صوت النظام لأن الصوت يشغل عبر الخدمة
+            // القناة الصامتة تماماً للأذان لمنع الصوت المزدوج للنظام نهائياً
             val adhanChannel = NotificationChannel(
-                CHANNEL_ID_ADHAN_URGENT,
-                "أذان الصلاة العاجل",
+                CHANNEL_ID_ADHAN_SILENT_V5,
+                "أذان الصلاة (صوت المؤذن الحصري)",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "تنبيه الأذان ودخول وقت الفريضة بدقة فوق شاشة القفل"
+                description = "تنبيه الأذان ودخول وقت الفريضة بدقة فوق شاشة القفل بصوت المؤذن فقط"
                 setSound(null, null)
-                enableVibration(true)
+                enableVibration(false)
                 setShowBadge(true)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                 // تجاوز وضع عدم الإزعاج
@@ -122,7 +123,9 @@ class SakinahApplication : Application(), Configuration.Provider {
     companion object {
         const val CHANNEL_ID_AZKAR         = "sakinah_azkar_reminders"
         const val CHANNEL_ID_FLOATING_ZIKR = "sakinah_floating_zikr"
-        const val CHANNEL_ID_ADHAN_URGENT  = "sakinah_adhan_urgent_v4"
+        const val CHANNEL_ID_ADHAN_SILENT_V5 = "sakinah_adhan_silent_channel_v5"
+        @Deprecated("Replaced by CHANNEL_ID_ADHAN_SILENT_V5")
+        const val CHANNEL_ID_ADHAN_URGENT  = "sakinah_adhan_silent_channel_v5"
         const val CHANNEL_ID_PRE_ADHAN     = "sakinah_pre_adhan_channel"
         const val CHANNEL_ID_SOCIAL        = "sakinah_social_reminder_channel"
     }

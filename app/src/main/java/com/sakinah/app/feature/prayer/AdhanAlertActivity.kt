@@ -2,8 +2,10 @@ package com.sakinah.app.feature.prayer
 
 import android.app.Activity
 import android.app.KeyguardManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -47,6 +49,29 @@ import androidx.compose.ui.unit.sp
 import com.sakinah.app.core.ui.theme.SakinahTheme
 
 class AdhanAlertActivity : ComponentActivity() {
+
+    private val dismissReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            finishAndRemoveTask()
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter(AdhanForegroundService.ACTION_DISMISS_ADHAN_ALERT)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(dismissReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(dismissReceiver, filter)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        try {
+            unregisterReceiver(dismissReceiver)
+        } catch (_: Exception) {}
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

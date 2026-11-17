@@ -145,6 +145,13 @@ class QuranRepository @Inject constructor(
         pageMap ?: emptyMap()
     }
 
+    suspend fun getAllAyahs(): List<AyahItem> = withContext(Dispatchers.IO) {
+        if (cachedAllAyahs == null) {
+            getAllPages()
+        }
+        cachedAllAyahs ?: emptyList()
+    }
+
     suspend fun getAyahsForPage(pageNumber: Int): List<AyahItem> = withContext(Dispatchers.IO) {
         val safePage = pageNumber.coerceIn(1, 604)
         val all = getAllPages()

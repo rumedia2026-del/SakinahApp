@@ -106,6 +106,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     onNavigateBack: (() -> Unit)? = null,
     onOpenAdhanSettings: (() -> Unit)? = null,
+    onOpenAdminDashboard: (() -> Unit)? = null,
     viewModel: SettingsViewModel = hiltViewModel(),
     azkarRepository: AzkarRepository = hiltViewModel<SettingsRepositoryHolder>().azkarRepository
 ) {
@@ -120,6 +121,12 @@ fun SettingsScreen(
                 .getString(com.sakinah.app.feature.prayer.AdhanAlarmScheduler.KEY_SELECTED_MUEZZIN, "makkah") ?: "makkah"
         )
     }
+
+    // 5-tap detector for developer admin dashboard
+    var logoTapCount by remember { mutableStateOf(0) }
+    var lastLogoTapTime by remember { mutableStateOf(0L) }
+    var showPinDialog by remember { mutableStateOf(false) }
+    var enteredPin by remember { mutableStateOf("") }
 
     androidx.compose.runtime.DisposableEffect(Unit) {
         onDispose { sheikhPlayer.release() }
@@ -190,6 +197,60 @@ fun SettingsScreen(
         )
     }
 
+    if (showPinDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showPinDialog = false
+                enteredPin = ""
+            },
+            title = {
+                Text("لوحة تحكم المشرفين (Admin)", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "أدخل رمز الأمان PIN للوصول إلى لوحة التحكم والمزامنة السحابية:",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedTextField(
+                        value = enteredPin,
+                        onValueChange = { enteredPin = it },
+                        label = { Text("رمز PIN (الافتراضي 2026)") },
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (enteredPin.trim() == "2026") {
+                            showPinDialog = false
+                            enteredPin = ""
+                            onOpenAdminDashboard?.invoke()
+                        } else {
+                            Toast.makeText(context, "رمز PIN غير صحيح", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = emeraldPrimary)
+                ) {
+                    Text("دخول", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showPinDialog = false
+                    enteredPin = ""
+                }) {
+                    Text("إلغاء")
+                }
+            }
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
@@ -233,7 +294,22 @@ fun SettingsScreen(
                 Card(
                     shape = MaterialTheme.shapes.large,
                     colors = CardDefaults.cardColors(containerColor = emeraldPrimary),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .clickable {
+                            val now = System.currentTimeMillis()
+                            if (now - lastLogoTapTime > 2500) {
+                                logoTapCount = 1
+                            } else {
+                                logoTapCount++
+                            }
+                            lastLogoTapTime = now
+                            if (logoTapCount >= 5) {
+                                logoTapCount = 0
+                                showPinDialog = true
+                            }
+                        }
                 ) {
                     Row(
                         modifier = Modifier

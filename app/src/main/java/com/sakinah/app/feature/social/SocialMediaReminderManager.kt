@@ -63,6 +63,59 @@ object SocialMediaReminderManager {
         "نهاية الشوط في السوشيال ميديا: اضغط سبّحت وخلي يومك يشهدلك بخير، سبحان الله العظيم 🌿"
     )
 
+    private const val KEY_CUSTOM_MESSAGES_JSON = "social_custom_messages_json"
+
+    fun getAllPhrases(context: Context): List<String> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val jsonStr = prefs.getString(KEY_CUSTOM_MESSAGES_JSON, null)
+        if (!jsonStr.isNullOrBlank()) {
+            try {
+                val array = org.json.JSONArray(jsonStr)
+                val list = mutableListOf<String>()
+                for (i in 0 until array.length()) {
+                    list.add(array.getString(i))
+                }
+                if (list.isNotEmpty()) return list
+            } catch (_: Exception) {}
+        }
+        return WITTY_MESSAGES
+    }
+
+    fun addPhrase(context: Context, phrase: String) {
+        val list = getAllPhrases(context).toMutableList()
+        if (!list.contains(phrase)) {
+            list.add(0, phrase)
+            savePhrases(context, list)
+        }
+    }
+
+    fun updatePhrase(context: Context, index: Int, newPhrase: String) {
+        val list = getAllPhrases(context).toMutableList()
+        if (index in list.indices) {
+            list[index] = newPhrase
+            savePhrases(context, list)
+        }
+    }
+
+    fun deletePhrase(context: Context, index: Int) {
+        val list = getAllPhrases(context).toMutableList()
+        if (index in list.indices) {
+            list.removeAt(index)
+            savePhrases(context, list)
+        }
+    }
+
+    fun resetPhrases(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().remove(KEY_CUSTOM_MESSAGES_JSON).apply()
+    }
+
+    private fun savePhrases(context: Context, list: List<String>) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val array = org.json.JSONArray(list)
+        prefs.edit().putString(KEY_CUSTOM_MESSAGES_JSON, array.toString()).apply()
+    }
+
     fun isEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getBoolean(KEY_ENABLED, false)
@@ -171,7 +224,8 @@ object SocialMediaReminderManager {
      * وإن لم يكن متاحاً، يرسل Heads-Up Notification فوري مع FullScreenIntent.
      */
     fun triggerSocialReminder(context: Context, customMessage: String? = null) {
-        val message = customMessage ?: WITTY_MESSAGES[Random.nextInt(WITTY_MESSAGES.size)]
+        val phrases = getAllPhrases(context)
+        val message = customMessage ?: if (phrases.isNotEmpty()) phrases[Random.nextInt(phrases.size)] else WITTY_MESSAGES.first()
 
         if (hasOverlayPermission(context)) {
             val intent = Intent(context, SocialMediaOverlayService::class.java).apply {
